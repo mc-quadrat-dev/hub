@@ -1,0 +1,1410 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>mc-quadrat – Brand Hub</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    @font-face {
+      font-family: 'Rambla Alt';
+      src: url('https://cdn.prod.website-files.com/63d1db62419ce00ced86330f/63d1db62419ce0d9f0863430_rambla_alt_regular.otf') format('opentype');
+      font-weight: 400; font-style: normal; font-display: swap;
+    }
+    @font-face {
+      font-family: 'Rambla Alt Oscura';
+      src: url('https://cdn.prod.website-files.com/63d1db62419ce00ced86330f/63d1db62419ce071d1863415_rambla_alt_oscura.otf') format('opentype');
+      font-weight: 700; font-style: normal; font-display: swap;
+    }
+    body {
+      overflow: hidden;
+      background-color: #000000;
+      width: 100vw;
+      height: 100vh;
+      cursor: default;
+      user-select: none;
+      -webkit-user-select: none;
+      font-family: 'Rambla Alt', 'Inter', 'Segoe UI', sans-serif;
+    }
+
+    /* ===================== ANIMATION LAYER ===================== */
+    #main-view {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+    }
+    .inner-glow {
+      position: absolute; pointer-events: none; border-radius: 50%;
+      background: radial-gradient(circle closest-side, rgba(206,251,11,0.18) 0%, rgba(206,251,11,0) 100%);
+      transform: translate(-50%, -50%); z-index: 9;
+    }
+    .arrow {
+      position: absolute; z-index: 3; will-change: transform; transition: none;
+      background-color: currentColor;
+      -webkit-mask: var(--arrow-url) center/100% 100% no-repeat;
+      mask: var(--arrow-url) center/100% 100% no-repeat;
+    }
+    .grain-layer {
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      pointer-events: none; z-index: 2;
+      background-repeat: no-repeat;
+      background-position: top center;
+      background-size: cover;
+    }
+    .star {
+      position: absolute; z-index: 10; cursor: grab; transform: translate(-50%, -50%);
+    }
+    .star.dragging { cursor: grabbing; }
+    .star img { display: block; width: 100%; height: 100%; }
+
+    /* ===================== GENERATOR CONTROLS ===================== */
+    .controls-bar {
+      position: fixed; bottom: 24px; right: 24px; z-index: 100;
+      display: flex; align-items: center; gap: 10px;
+      background: #111111;
+      border: 1px solid rgba(255,255,255,0.14); border-radius: 0;
+      padding: 10px 16px; color: rgba(255,255,255,0.7); font-size: 12px;
+    }
+    .scale-group { display: flex; align-items: center; gap: 8px; }
+    .scale-dual { display: flex; flex-direction: column; gap: 4px; }
+    .scale-row { display: flex; align-items: center; gap: 6px; font-size: 11px; }
+    .scale-row label { min-width: 42px; color: rgba(255,255,255,0.5); font-size: 10px; }
+    input[type=range] {
+      -webkit-appearance: none; appearance: none; width: 120px; height: 4px; border-radius: 0;
+      background: rgba(255,255,255,0.18); outline: none; cursor: pointer;
+    }
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none; appearance: none; width: 16px; height: 16px; border-radius: 0;
+      background: #cefb0b; border: 2px solid rgba(255,255,255,0.3);
+    }
+    .scale-value { min-width: 32px; text-align: center; color: #cefb0b; font-weight: 600; font-size: 11px; }
+    .lock-btn {
+      background: transparent; border: 1px solid rgba(255,255,255,0.25); display: flex; align-items: center; justify-content: center; width: 26px; height: 26px;
+      color: rgba(255,255,255,0.7); border-radius: 0; padding: 0; margin: 0;
+      cursor: pointer; transition: border-color 0.15s;
+      -webkit-appearance: none; appearance: none; font-family: inherit;
+    }
+    .lock-btn svg { width: 14px; height: 14px; }
+    .lock-btn:hover { border-color: rgba(255,255,255,0.5); }
+    .lock-btn.locked { color: #cefb0b; }
+    .ctrl-btn {
+      background: transparent; border: 1px solid rgba(255,255,255,0.3);
+      color: rgba(255,255,255,0.8); border-radius: 0; padding: 5px 12px; margin: 0;
+      font-size: 12px; cursor: pointer; transition: border-color 0.15s; font-family: inherit;
+      -webkit-appearance: none; appearance: none;
+    }
+    .ctrl-btn:hover { border-color: rgba(255,255,255,0.6); }
+    .ctrl-btn.primary { background: #cefb0b; color: #000; border: none; font-weight: bold; }
+    .ctrl-btn.primary:hover { background: #b5dd03; }
+    .icon-btn {
+      background: transparent; border: 1px solid rgba(255,255,255,0.3);
+      color: rgba(255,255,255,0.8); border-radius: 0; padding: 5px 8px; margin: 0;
+      cursor: pointer; transition: border-color 0.15s; font-family: inherit;
+      -webkit-appearance: none; appearance: none; display: flex; align-items: center; justify-content: center;
+    }
+    .icon-btn:hover { border-color: rgba(255,255,255,0.6); }
+    .icon-btn.danger:hover { background: rgba(228,0,44,0.5); border-color: rgba(228,0,44,0.7); }
+    .move-btn {
+      background: transparent; border: 1px solid rgba(255,255,255,0.3);
+      color: rgba(255,255,255,0.8); border-radius: 0; padding: 5px 8px; margin: 0;
+      cursor: grab; transition: border-color 0.15s; font-family: inherit;
+      -webkit-appearance: none; appearance: none; display: flex; align-items: center; justify-content: center;
+      position: absolute; z-index: 60; top: -40px; right: 0;
+    }
+    .move-btn:hover { border-color: rgba(255,255,255,0.6); }
+    .move-btn:active { cursor: grabbing; }
+
+    /* ===================== FORMAT MODAL ===================== */
+    #modal-overlay {
+      display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+      z-index: 200; justify-content: center; align-items: center;
+    }
+    #modal-overlay.visible { display: flex; }
+    #modal {
+      background: #111111; border: 1px solid rgba(255,255,255,0.18); border-radius: 0;
+      padding: 28px 32px; width: 320px; color: rgba(255,255,255,0.85);
+    }
+    .modal-row { display: flex; gap: 10px; margin-bottom: 20px; }
+    .modal-input {
+      background: #1a1a1a; border: 1px solid rgba(255,255,255,0.18);
+      border-radius: 0; color: #fff; padding: 7px 10px; font-size: 13px; width: 100%;
+    }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 10px; }
+    .format-btn {
+      padding: 5px 8px; font-size: 11px; background: transparent;
+      border: 1px solid rgba(255,255,255,0.25); border-radius: 0; cursor: pointer;
+      color: #fff; transition: border-color 0.1s;
+      -webkit-appearance: none; appearance: none; margin: 0 6px 6px 0; font-family: inherit;
+    }
+    .format-btn:hover { border-color: rgba(255,255,255,0.55); }
+
+    /* ===================== EDITOR VIEW ===================== */
+    #editor-view {
+      display: none; position: fixed; inset: 0; z-index: 80; background: #0a0a0a;
+      flex-direction: column; overflow: hidden;
+    }
+    #editor-view.visible { display: flex; }
+    #editor-wrapper { position: relative; }
+    .editor-header {
+      padding: 16px 24px; display: flex; justify-content: space-between; align-items: center;
+      background: #0a0a0a; border-bottom: 1px solid rgba(255,255,255,0.10);
+    }
+    .editor-title { color: #fff; font-weight: 700; font-family: 'Rambla Alt Oscura', 'Inter', sans-serif; font-size: 18px; }
+    .editor-header-right { display: flex; gap: 8px; align-items: center; }
+    .editor-content {
+      flex: 1; display: flex; justify-content: center; align-items: center;
+      overflow: auto; padding: 24px; position: relative;
+    }
+    .editor-panel {
+      position: relative; background-color: #000000; overflow: hidden;
+      border: 1px solid rgba(255,255,255,0.10); box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    }
+    .editor-footer {
+      padding: 16px; display: flex; justify-content: center; align-items: center; gap: 12px;
+      background: #0a0a0a; border-top: 1px solid rgba(255,255,255,0.10);
+      flex-wrap: wrap;
+    }
+    .editor-scale-bar {
+      display: flex; align-items: center; gap: 10px;
+      background: #111111;
+      border: 1px solid rgba(255,255,255,0.14); border-radius: 0;
+      padding: 8px 14px; color: rgba(255,255,255,0.7); font-size: 12px;
+      margin-left: 24px;
+    }
+    .pagination-text { color: #fff; font-size: 14px; min-width: 100px; text-align: center; }
+
+    #logo-mode-wrap {
+      position: absolute; left: 16px; top: 50%; transform: translateY(-50%);
+      visibility: hidden;
+    }
+    .logo-cb-label {
+      display: flex; align-items: center; gap: 8px;
+      cursor: pointer; color: rgba(255,255,255,0.7); font-size: 13px;
+      user-select: none; -webkit-user-select: none;
+    }
+    .logo-cb-label input[type=checkbox] {
+      width: 15px; height: 15px; cursor: pointer;
+      accent-color: #cefb0b;
+    }
+
+    /* ===================== HUB VIEW ===================== */
+    #hub-view {
+      position: fixed; inset: 0; z-index: 40;
+      display: none; flex-direction: column; align-items: center;
+      padding: 0 40px 40px;
+      overflow-y: auto;
+      background: #000000;
+      opacity: 0;
+      transition: opacity 0.9s ease;
+    }
+    #hub-view.visible { display: flex; }
+    #hub-view.faded-in { opacity: 1; }
+
+    .hub-header {
+      width: 100%; max-width: 960px;
+      padding-top: 52px;
+      display: flex; flex-direction: column; align-items: center;
+      margin-bottom: 44px;
+    }
+    .hub-eyebrow {
+      font-size: 11px; letter-spacing: 0.22em; text-transform: uppercase;
+      color: rgba(255,255,255,0.55); margin-bottom: 10px;
+    }
+    .hub-title {
+      font-size: clamp(36px, 5.5vw, 68px);
+      font-weight: 700;
+      font-family: 'Rambla Alt Oscura', 'Inter', sans-serif;
+      color: #fff;
+      letter-spacing: 0.01em;
+      text-align: center;
+      line-height: 1.0;
+    }
+    .hub-title span { color: #cefb0b; }
+
+    .hub-sections { width: 100%; max-width: 960px; display: flex; flex-direction: column; gap: 40px; }
+    .hub-section-label {
+      font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase;
+      color: rgba(255,255,255,0.5); margin-bottom: 16px;
+    }
+    .hub-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 18px;
+      width: 100%;
+    }
+
+    .hub-tile {
+      background: transparent;
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 0;
+      padding: 28px 24px 24px;
+      cursor: pointer;
+      transition: background 0.2s, border-color 0.2s, transform 0.2s, box-shadow 0.2s;
+      display: flex; flex-direction: column; gap: 14px;
+      color: #fff; min-height: 170px;
+      user-select: none;
+    }
+    .hub-tile:hover {
+      background: rgba(255,255,255,0.04);
+      border-color: rgba(206,251,11,0.45);
+      transform: translateY(-3px);
+      box-shadow: 0 8px 20px rgba(206,251,11,0.08);
+    }
+    .hub-tile:active { transform: translateY(-1px); }
+    .hub-tile-icon {
+      width: 44px; height: 44px;
+      background: #cefb0b;
+      border-radius: 0;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .hub-tile-icon svg { width: 22px; height: 22px; stroke: #000; fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+    .hub-tile-title { font-size: 17px; font-weight: 700; font-family: 'Rambla Alt Oscura', 'Inter', sans-serif; letter-spacing: 0.005em; color: #fff; }
+    .hub-tile-desc { font-size: 12px; color: rgba(255,255,255,0.6); line-height: 1.55; }
+
+    .hub-tile.soon {
+      opacity: 0.58;
+      cursor: default;
+    }
+    .hub-tile.soon:hover {
+      background: transparent;
+      border-color: rgba(255,255,255,0.12);
+      transform: none;
+      box-shadow: none;
+    }
+    .soon-badge {
+      display: inline-block;
+      font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase;
+      background: transparent;
+      border: 1px solid rgba(255,255,255,0.18);
+      border-radius: 0; padding: 3px 7px;
+      color: rgba(255,255,255,0.45);
+      margin-top: auto;
+    }
+
+    /* ===================== SECTION PANELS ===================== */
+    .section-panel {
+      position: fixed; inset: 0; z-index: 60;
+      display: none; flex-direction: column;
+      background: #000000;
+      overflow-y: auto;
+    }
+    .section-panel.visible { display: flex; }
+
+    .section-header {
+      position: sticky; top: 0; z-index: 2;
+      display: flex; align-items: center; gap: 16px;
+      padding: 18px 32px;
+      background: #000000;
+      border-bottom: 1px solid rgba(255,255,255,0.10);
+    }
+    .section-back {
+      background: transparent; border: 1px solid rgba(255,255,255,0.3);
+      color: rgba(255,255,255,0.8); border-radius: 0;
+      padding: 6px 14px; font-size: 13px; cursor: pointer;
+      font-family: inherit; transition: border-color 0.15s;
+      -webkit-appearance: none; appearance: none;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .section-back:hover { border-color: rgba(255,255,255,0.6); }
+    .section-header-title { font-size: 20px; font-weight: 700; font-family: 'Rambla Alt Oscura', 'Inter', sans-serif; letter-spacing: 0.01em; color: #fff; }
+
+    .section-body {
+      padding: 36px 40px 60px;
+      max-width: 1100px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    /* ===================== LOGO SECTION ===================== */
+    .filter-group { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+    .filter-label { font-size: 11px; color: rgba(255,255,255,0.55); letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 8px; }
+    .filter-chip {
+      padding: 6px 16px; font-size: 12px; font-weight: 500;
+      background: transparent; border: 1px solid rgba(255,255,255,0.25);
+      border-radius: 0; color: rgba(255,255,255,0.65); cursor: pointer;
+      transition: border-color 0.15s, color 0.15s; font-family: inherit;
+      -webkit-appearance: none; appearance: none;
+    }
+    .filter-chip:hover { border-color: rgba(255,255,255,0.5); }
+    .filter-chip.active {
+      background: transparent; border-color: rgba(206,251,11,0.55);
+      color: #fff;
+    }
+
+    .logo-layout { display: flex; gap: 32px; flex-wrap: wrap; margin-top: 24px; }
+    .logo-preview-col { display: flex; flex-direction: column; gap: 14px; flex: 0 0 auto; }
+    .logo-preview-wrap {
+      width: 280px; aspect-ratio: 1;
+      border-radius: 0;
+      border: 1px solid rgba(255,255,255,0.12);
+      display: flex; align-items: center; justify-content: center;
+      padding: 32px;
+      transition: background 0.3s;
+    }
+    .logo-preview-wrap.bg-dark    { background: #000000; }
+    .logo-preview-wrap.bg-light   { background: #f2f2f2; }
+    .logo-preview-wrap img { max-width: 100%; max-height: 100%; object-fit: contain; display: block; }
+
+    .logo-download-row { display: flex; gap: 8px; }
+    .logo-download-row .download-btn { flex: 1; justify-content: center; }
+    .logo-size-input-wrap { display: flex; flex-direction: column; gap: 5px; }
+    .logo-size-input-wrap label { font-size: 11px; color: rgba(255,255,255,0.6); }
+    .logo-size-input {
+      background: #1a1a1a; border: 1px solid rgba(255,255,255,0.18);
+      border-radius: 0; color: #fff; padding: 7px 10px; font-size: 13px;
+      width: 100px; font-family: inherit;
+      -webkit-appearance: none; appearance: none;
+    }
+    .logo-size-unit { font-size: 11px; color: rgba(255,255,255,0.35); margin-left: 4px; }
+    .download-btn {
+      background: #cefb0b; color: #000; border: none;
+      border-radius: 0; padding: 9px 20px; font-size: 13px; font-weight: 600;
+      cursor: pointer; font-family: inherit; transition: background 0.15s;
+      display: flex; align-items: center; gap: 7px;
+      -webkit-appearance: none; appearance: none;
+    }
+    .download-btn:hover { background: #b5dd03; }
+    .download-btn.secondary {
+      background: transparent; border: 1px solid rgba(255,255,255,0.3); color: rgba(255,255,255,0.85);
+    }
+    .download-btn.secondary:hover { border-color: rgba(255,255,255,0.6); }
+    .download-btn:disabled {
+      opacity: 0.3; cursor: not-allowed; pointer-events: none;
+      background: transparent; border-color: rgba(255,255,255,0.08); color: rgba(255,255,255,0.4);
+    }
+    /* ===================== FARBEN SECTION ===================== */
+    .colors-intro { font-size: 13px; color: rgba(255,255,255,0.6); margin-bottom: 32px; }
+    .colors-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 14px;
+    }
+    .color-swatch {
+      border-radius: 0; overflow: hidden;
+      border: 1px solid rgba(255,255,255,0.2);
+      cursor: pointer; transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
+      position: relative;
+    }
+    .color-swatch:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0,0,0,0.25); border-color: rgba(255,255,255,0.4); }
+    .color-swatch:active { transform: scale(0.97); }
+    .swatch-color { height: 80px; width: 100%; }
+    .swatch-info { padding: 10px 11px; background: transparent; border-top: 1px solid rgba(255,255,255,0.14); }
+    .swatch-name { font-size: 10px; color: rgba(255,255,255,0.55); line-height: 1.4; margin-bottom: 3px; }
+    .swatch-hex { font-size: 13px; font-weight: 600; color: #fff; font-family: 'SF Mono', 'Fira Code', monospace; }
+    .swatch-rgb { font-size: 10px; color: rgba(255,255,255,0.5); font-family: 'SF Mono', 'Fira Code', monospace; margin-top: 2px; }
+    .swatch-copied {
+      position: absolute; inset: 0; background: rgba(206,251,11,0.92);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 600; color: #000;
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.15s;
+      border-radius: 0;
+    }
+    .color-swatch.flash .swatch-copied { opacity: 1; }
+
+    /* ===================== TEAMS SECTION ===================== */
+    .teams-grid { display: flex; gap: 32px; flex-wrap: wrap; }
+    .teams-card {
+      flex: 0 0 auto;
+      background: transparent;
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 0;
+      overflow: hidden;
+      width: 420px;
+    }
+    .teams-preview-wrap {
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      overflow: hidden;
+      display: flex; align-items: center; justify-content: center;
+      background: #111111;
+    }
+    .teams-preview-wrap img { max-width: 100%; max-height: 100%; width: auto; height: auto; object-fit: contain; display: block; }
+    .teams-card-footer {
+      padding: 16px 18px;
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    .teams-card-label { font-size: 13px; color: rgba(255,255,255,0.7); font-weight: 500; }
+    .teams-card-meta { font-size: 11px; color: rgba(255,255,255,0.55); }
+
+    /* ===================== DASHBOARD GENERATOR ===================== */
+    #dash-view {
+      display: none; position: fixed; inset: 0; z-index: 80; background: #0a0a0a;
+      flex-direction: column; overflow: hidden;
+    }
+    #dash-view.visible { display: flex; }
+
+    .dash-header {
+      flex: 0 0 auto;
+      padding: 16px 24px; display: flex; justify-content: space-between; align-items: center;
+      background: #0a0a0a; border-bottom: 1px solid rgba(255,255,255,0.10);
+    }
+    .dash-header-left { display: flex; align-items: center; gap: 16px; min-width: 0; }
+    .dash-header-right { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; }
+    .dash-header-right .ctrl-btn { white-space: nowrap; }
+    .dash-title {
+      color: #fff; font-weight: 700; font-size: 18px;
+      font-family: 'Rambla Alt Oscura', 'Inter', sans-serif;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+
+    .dash-body { flex: 1; display: flex; min-height: 0; }
+    .dash-stage {
+      flex: 1; min-width: 0; overflow: hidden;
+      display: flex; align-items: center; justify-content: center; padding: 24px;
+    }
+    #dash-wrapper {
+      position: relative;
+      width: 100%; max-width: calc((100vh - 230px) * 16 / 9);
+      aspect-ratio: 16 / 9;
+      background: #000; border: 1px solid rgba(255,255,255,0.12);
+    }
+    #dash-svg { display: block; width: 100%; height: 100%; user-select: none; -webkit-user-select: none; }
+    #dash-svg .dash-card { cursor: grab; }
+    body.dash-dragging, body.dash-dragging * { cursor: grabbing !important; }
+
+    /* Editor-Elemente liegen als HTML über dem SVG – so muss für Auswahl und
+       Ziehen nicht neu gerendert werden und nichts davon landet je im Export. */
+    #dash-overlay { position: absolute; inset: 0; pointer-events: none; }
+    .dash-sel-box { position: absolute; outline: 2px solid #cefb0b; }
+    .dash-handle {
+      position: absolute; width: 14px; height: 14px; background: #cefb0b;
+      transform: translate(-50%, -50%); pointer-events: auto; cursor: nwse-resize;
+    }
+    .dash-ghost {
+      position: absolute; border: 2px dashed #cefb0b; background: rgba(206,251,11,0.10);
+    }
+
+    .dash-sidebar-outer {
+      flex: 0 0 340px; width: 340px;
+      background: #0a0a0a; border-left: 1px solid rgba(255,255,255,0.10);
+      display: flex; flex-direction: column; min-height: 0;
+    }
+    .dash-sidebar-topbar {
+      flex: 0 0 auto; padding: 16px 20px;
+      display: flex; justify-content: flex-end;
+      border-bottom: 1px solid rgba(255,255,255,0.10);
+    }
+    .dash-sidebar {
+      flex: 1; overflow-y: auto; padding: 20px;
+    }
+    .dash-footer {
+      flex: 0 0 auto;
+      padding: 12px 16px; display: flex; align-items: center; justify-content: center;
+      gap: 12px; flex-wrap: wrap;
+      background: #0a0a0a; border-top: 1px solid rgba(255,255,255,0.10);
+    }
+    .dash-footer .ctrl-btn, #dash-autogrid-wrap span { white-space: nowrap; }
+    .dash-side-label {
+      font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase;
+      color: rgba(255,255,255,0.55); margin-bottom: 10px;
+    }
+    .dash-side-hint { font-size: 12px; color: rgba(255,255,255,0.45); line-height: 1.6; }
+    .dash-side-group { margin-bottom: 24px; }
+
+    .dash-card-list { display: flex; flex-direction: column; gap: 6px; }
+    .dash-card-item {
+      position: relative;
+      display: flex; align-items: center; justify-content: space-between; gap: 8px;
+      padding: 8px 10px; border: 1px solid rgba(255,255,255,0.12);
+      cursor: pointer; font-size: 12px; color: rgba(255,255,255,0.7);
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .dash-card-item > span:first-child {
+      flex: 1 1 auto; min-width: 0;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .dash-card-chevron { flex: 0 0 auto; opacity: 0.45; }
+    .dash-card-item.active .dash-card-chevron { opacity: 1; color: #cefb0b; }
+
+    /* Typ-Auswahl: erscheint beim erneuten Klick auf die bereits aktive Kachel */
+    .dash-type-menu {
+      position: absolute; left: -1px; right: -1px; top: calc(100% + 2px); z-index: 6;
+      background: #111111; border: 1px solid rgba(206,251,11,0.55);
+      display: flex; flex-direction: column;
+    }
+    .dash-type-menu.up { top: auto; bottom: calc(100% + 2px); }
+    .dash-type-opt {
+      background: transparent; border: none; border-radius: 0;
+      color: rgba(255,255,255,0.75); font-family: inherit; font-size: 12px;
+      padding: 9px 10px; text-align: left; cursor: pointer;
+      -webkit-appearance: none; appearance: none;
+    }
+    .dash-type-opt:hover { background: rgba(255,255,255,0.08); color: #fff; }
+    .dash-type-opt.active { color: #cefb0b; }
+    .dash-card-item:hover { border-color: rgba(255,255,255,0.35); }
+    .dash-card-item.active { border-color: #cefb0b; color: #fff; }
+    .dash-card-kind {
+      font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase;
+      color: rgba(255,255,255,0.4); flex: 0 0 auto; text-align: right;
+    }
+
+    .dash-field { display: flex; flex-direction: column; gap: 5px; margin-bottom: 12px; }
+    .dash-field label { font-size: 11px; color: rgba(255,255,255,0.55); }
+    .dash-input {
+      background: #1a1a1a; border: 1px solid rgba(255,255,255,0.18); border-radius: 0;
+      color: #fff; padding: 7px 10px; font-size: 13px; width: 100%;
+      font-family: inherit; -webkit-appearance: none; appearance: none;
+    }
+    .dash-input:focus { outline: none; border-color: rgba(206,251,11,0.55); }
+    textarea.dash-input { resize: vertical; min-height: 76px; line-height: 1.45; }
+    select.dash-input { cursor: pointer; }
+    .dash-row { display: flex; gap: 10px; }
+    .dash-row .dash-field { flex: 1; }
+
+    .dash-swatches { display: flex; gap: 8px; }
+    .dash-swatch {
+      width: 30px; height: 30px; padding: 0; cursor: pointer;
+      border: 1px solid rgba(255,255,255,0.25); border-radius: 0;
+      -webkit-appearance: none; appearance: none;
+    }
+    .dash-swatch.active { border-color: #cefb0b; box-shadow: inset 0 0 0 2px #0a0a0a; }
+
+    .dash-series-row { display: flex; gap: 6px; align-items: center; margin-bottom: 6px; }
+    .dash-series-row .dash-input { padding: 5px 8px; font-size: 12px; }
+    .dash-series-row .dash-s-label { flex: 1 1 auto; min-width: 0; }
+    .dash-series-row .dash-s-value { flex: 0 0 62px; }
+    .dash-series-color {
+      flex: 0 0 24px; height: 24px; padding: 0; cursor: pointer;
+      border: 1px solid rgba(255,255,255,0.25); border-radius: 0;
+      -webkit-appearance: none; appearance: none;
+    }
+
+    .dash-type-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .dash-type-chip {
+      display: flex; flex-direction: column; align-items: flex-start; gap: 6px;
+      padding: 14px 12px; background: transparent; cursor: pointer;
+      border: 1px solid rgba(255,255,255,0.25); border-radius: 0;
+      color: #fff; font-family: inherit; text-align: left;
+      transition: border-color 0.15s;
+      -webkit-appearance: none; appearance: none;
+    }
+    .dash-type-chip:hover { border-color: #cefb0b; }
+    .dash-type-chip svg { width: 20px; height: 20px; stroke: #cefb0b; fill: none; stroke-width: 1.6; }
+    .dash-type-chip span { font-size: 12px; font-weight: 600; }
+    .dash-type-chip small { font-size: 10px; color: rgba(255,255,255,0.5); line-height: 1.4; }
+
+    .dash-inline-edit {
+      position: absolute; z-index: 120; margin: 0; padding: 0 2px;
+      border: 1px dashed #cefb0b; border-radius: 0; outline: none; resize: none;
+      overflow: hidden; line-height: 1.06;
+      font-family: 'Rambla Alt Oscura', 'Inter', sans-serif;
+    }
+
+    /* body hat user-select:none – für Eingaben im Dashboard wieder freigeben */
+    #dash-view input, #dash-view textarea, #dash-view select, .dash-inline-edit {
+      user-select: text; -webkit-user-select: text;
+    }
+
+    /* ===================== ANIMATIONS GENERATOR ===================== */
+    #anim-view {
+      display: none; position: fixed; inset: 0; z-index: 80; background: #0a0a0a;
+      flex-direction: column; overflow: hidden;
+    }
+    #anim-view.visible { display: flex; }
+
+    .anim-header {
+      flex: 0 0 auto;
+      padding: 16px 24px; display: flex; justify-content: space-between; align-items: center;
+      background: #0a0a0a; border-bottom: 1px solid rgba(255,255,255,0.10);
+    }
+    .anim-header-left { display: flex; align-items: center; gap: 16px; min-width: 0; }
+    .anim-header-right { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; }
+    .anim-header-right .ctrl-btn { white-space: nowrap; }
+    .anim-title {
+      color: #fff; font-weight: 700; font-size: 18px;
+      font-family: 'Rambla Alt Oscura', 'Inter', sans-serif;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+
+    .anim-body { flex: 1; display: flex; min-height: 0; }
+    .anim-stage {
+      flex: 1; min-width: 0; overflow-y: auto;
+      display: flex; flex-wrap: wrap; gap: 28px;
+      align-items: flex-start; align-content: flex-start; justify-content: center;
+      padding: 28px;
+    }
+    .anim-card-wrap { display: flex; flex-direction: column; gap: 10px; align-items: center; }
+    .anim-cap { font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: rgba(255,255,255,0.45); }
+    .anim-card {
+      position: relative; overflow: hidden; background: #000;
+      border: 1px solid rgba(255,255,255,0.12);
+      container-type: size;
+    }
+    .anim-card.desktop { width: min(46vw, 660px); aspect-ratio: 1600/1040; }
+    .anim-card.mobile  { width: min(15vw, 208px); aspect-ratio: 1040/1640; }
+    .anim-pattern-layer { position: absolute; inset: 0; z-index: 1; }
+
+    /* Text-Overlay: zeigt, wie Headlines über dem Muster stehen */
+    .anim-overlay { position: absolute; inset: 0; z-index: 2; pointer-events: none; }
+    .anim-overlay h2 {
+      position: absolute; margin: 0; color: #fff; font-weight: 700; line-height: 1.02;
+      font-family: 'Rambla Alt Oscura', 'Inter', sans-serif;
+    }
+    /* Querformat: Muster links, Headline rechts in der ruhigen Fläche */
+    .anim-card.desktop .anim-overlay h2 {
+      right: 6%; top: 50%; transform: translateY(-50%);
+      text-align: right; font-size: 6.2cqw; max-width: 46%;
+    }
+    /* Hochformat: Headline unten, mit Abdunkelung darunter für die Lesbarkeit */
+    .anim-card.mobile .anim-overlay h2 { left: 9%; bottom: 9%; font-size: 11.5cqw; max-width: 82%; }
+    .anim-card.mobile .anim-overlay::after {
+      content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 48%;
+      background: linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,0.85) 100%);
+      z-index: -1;
+    }
+
+    .anim-sidebar {
+      flex: 0 0 340px; width: 340px;
+      background: #0a0a0a; border-left: 1px solid rgba(255,255,255,0.10);
+      overflow-y: auto; padding: 20px;
+    }
+    .anim-group { margin-bottom: 24px; }
+    .anim-ctrl { margin-bottom: 14px; }
+    .anim-ctrl-row {
+      display: flex; justify-content: space-between; align-items: baseline;
+      gap: 10px; margin-bottom: 5px;
+    }
+    .anim-ctrl-row label { font-size: 12px; color: rgba(255,255,255,0.7); }
+    .anim-val { font-size: 11px; color: #cefb0b; font-variant-numeric: tabular-nums; }
+    .anim-presets { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 22px; }
+
+    .anim-exp-row { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+    .anim-exp-btn:disabled { opacity: 0.35; pointer-events: none; }
+    .anim-footer {
+      flex: 0 0 auto;
+      padding: 11px 24px; background: #0a0a0a;
+      border-top: 1px solid rgba(255,255,255,0.10);
+      font-size: 12px; color: rgba(255,255,255,0.6);
+    }
+
+    /* ===================== INTRANET KACHEL GENERATOR ===================== */
+    #itk-view {
+      display: none; position: fixed; inset: 0; z-index: 80; background: #0a0a0a;
+      flex-direction: column; overflow: hidden;
+    }
+    #itk-view.visible { display: flex; }
+
+    .itk-header {
+      flex: 0 0 auto;
+      padding: 16px 24px; display: flex; justify-content: space-between; align-items: center;
+      background: #0a0a0a; border-bottom: 1px solid rgba(255,255,255,0.10);
+    }
+    .itk-header-left { display: flex; align-items: center; gap: 16px; min-width: 0; }
+    .itk-title {
+      color: #fff; font-weight: 700; font-size: 18px;
+      font-family: 'Rambla Alt Oscura', 'Inter', sans-serif;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+
+    .itk-body { flex: 1; display: flex; min-height: 0; }
+
+    /* Linke Spalte: Bild + alle Bedienelemente, für sich scrollbar */
+    .itk-editor {
+      flex: 0 0 400px; width: 400px;
+      background: #0a0a0a; border-right: 1px solid rgba(255,255,255,0.10);
+      overflow-y: auto; padding: 20px;
+    }
+    .itk-group { margin-bottom: 24px; }
+    .itk-group:last-child { margin-bottom: 0; }
+
+    /* Motiv-Vorschau bleibt beim Scrollen der Bedienelemente sichtbar –
+       läuft randlos bis zur Oberkante der Spalte (Negativ-Margin gleicht
+       das Innenpolster von .itk-editor aus) und legt sich über den Rest. */
+    .itk-sticky-preview {
+      position: sticky; top: 0; z-index: 5;
+      background: #0a0a0a;
+      margin: -20px -20px 20px -20px;
+      padding: 20px 20px 16px;
+      border-bottom: 1px solid rgba(255,255,255,0.14);
+    }
+
+    .itk-canvas-wrap {
+      position: relative; width: 100%; aspect-ratio: 1180/623;
+      background: #000; border: 1px solid rgba(255,255,255,0.16);
+      cursor: crosshair; overflow: hidden;
+    }
+    .itk-canvas-wrap.dragover { border-color: #cefb0b; }
+    .itk-canvas-wrap canvas { width: 100%; height: 100%; display: block; touch-action: none; }
+    .itk-drop-hint {
+      position: absolute; inset: 0; display: flex; flex-direction: column; gap: 8px;
+      align-items: center; justify-content: center; text-align: center;
+      color: rgba(255,255,255,0.4); pointer-events: none; transition: opacity 0.15s;
+    }
+    .itk-drop-hint.hidden { opacity: 0; }
+    .itk-drop-hint svg { width: 30px; height: 30px; opacity: 0.5; }
+    .itk-drop-hint p { font-size: 12px; }
+    .itk-drop-hint .sub { font-size: 11px; color: rgba(255,255,255,0.25); }
+
+    .itk-btn-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+    .itk-btn-row .ctrl-btn { flex: 1 1 auto; }
+
+    /* Bild-basierte Auswahlkacheln: Verlauf-Vorschauen, Icon-Vorschauen */
+    .itk-swatch-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+    .itk-swatch {
+      position: relative; aspect-ratio: 1; cursor: pointer; overflow: hidden;
+      border: 1px solid rgba(255,255,255,0.25); background: #1a1a1a;
+      transition: border-color 0.15s;
+    }
+    .itk-swatch:hover { border-color: rgba(255,255,255,0.55); }
+    .itk-swatch.active { border-color: #cefb0b; }
+    .itk-swatch img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .itk-swatch.itk-none { display: flex; align-items: center; justify-content: center; }
+    .itk-swatch.itk-none span {
+      font-size: 9px; letter-spacing: 0.06em; text-transform: uppercase;
+      color: rgba(255,255,255,0.45); text-align: center; padding: 4px;
+    }
+    .itk-swatch-label {
+      position: absolute; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.72); color: #fff;
+      font-size: 8px; font-weight: 600; text-align: center;
+      text-transform: uppercase; letter-spacing: 0.03em;
+      padding: 3px 2px; line-height: 1.3;
+    }
+    .itk-swatch.active .itk-swatch-label { background: rgba(206,251,11,0.9); color: #000; }
+
+    /* Design-Position: 8 Layout-Kacheln mit Lime-Flächenindikator */
+    .itk-layout-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+    .itk-layout-btn {
+      position: relative; aspect-ratio: 16/9; cursor: pointer;
+      border: 1px solid rgba(255,255,255,0.25); background: #1a1a1a;
+      transition: border-color 0.15s;
+    }
+    .itk-layout-btn:hover { border-color: rgba(255,255,255,0.55); }
+    .itk-layout-btn.active { border-color: #cefb0b; }
+    .itk-layout-btn .ov { position: absolute; background: rgba(206,251,11,0.35); }
+    .itk-layout-btn.active .ov { background: rgba(206,251,11,0.6); }
+    .itk-layout-btn .no-design {
+      position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+      color: rgba(255,255,255,0.3); font-size: 13px;
+    }
+
+    .itk-mode-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+    .itk-mode-row .ctrl-btn.active { background: #cefb0b; color: #000; border-color: transparent; }
+
+    /* Rechte Spalte: klar gekennzeichneter Vorschaubereich */
+    .itk-previews { flex: 1; min-width: 0; overflow-y: auto; padding: 24px 28px; }
+    .itk-preview-eyebrow {
+      font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase;
+      color: #cefb0b; margin-bottom: 4px;
+    }
+    .itk-preview-sub { font-size: 12px; color: rgba(255,255,255,0.5); margin-bottom: 20px; }
+    .itk-preview-grid { display: flex; flex-wrap: wrap; gap: 18px; align-items: flex-start; }
+    .itk-preview-item { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+    .itk-preview-item canvas {
+      display: block; background: #1a1a1a; border: 1px solid rgba(255,255,255,0.14);
+    }
+    .itk-preview-name { font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.8); text-align: center; }
+    .itk-preview-size { font-size: 10px; color: rgba(255,255,255,0.4); text-align: center; }
+
+    /* ===================== TOAST ===================== */
+    #toast {
+      position: fixed; bottom: 32px; left: 50%; transform: translateX(-50%) translateY(12px);
+      background: rgba(206,251,11,0.95);
+      color: #000; padding: 10px 22px; border-radius: 0;
+      font-size: 13px; font-weight: 600; z-index: 300;
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.2s, transform 0.2s;
+    }
+    #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  </style>
+</head>
+<body>
+
+  <!-- ===== ANIMATION BACKGROUND ===== -->
+  <div id="main-view">
+    <div class="inner-glow" id="main-inner-glow"></div>
+    <div class="grain-layer" id="main-grain"></div>
+    <div class="star" id="main-star"></div>
+  </div>
+
+  <!-- ===== GENERATOR CONTROLS (nur direkt auf Animation sichtbar) ===== -->
+  <div class="controls-bar" id="main-controls" style="display:none;">
+    <label>Skalierung</label>
+    <div class="scale-group" id="main-scale-group">
+      <div id="main-scale-single">
+        <input type="range" id="main-scale-slider" min="1" max="8" value="2" step="1">
+        <span class="scale-value" id="main-scale-value">2</span>
+      </div>
+      <div class="scale-dual" id="main-scale-dual" style="display:none;">
+        <div class="scale-row">
+          <label>Grid</label>
+          <input type="range" id="main-arrow-scale-slider" min="1" max="8" value="2" step="1" style="width:90px;">
+          <span class="scale-value" id="main-arrow-scale-value">2</span>
+        </div>
+        <div class="scale-row">
+          <label>Fokus</label>
+          <input type="range" id="main-star-scale-slider" min="1" max="8" value="2" step="1" style="width:90px;">
+          <span class="scale-value" id="main-star-scale-value">2</span>
+        </div>
+      </div>
+      <button class="lock-btn locked" id="main-lock-btn" title="Skalierung koppeln/entkoppeln">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+      </button>
+    </div>
+    <button class="ctrl-btn primary" id="btn-open-layout-modal" style="margin-left:8px;">Layouts</button>
+  </div>
+
+  <!-- ===== EDITOR VIEW ===== -->
+  <div id="editor-view">
+    <div class="editor-header">
+      <button class="section-back" id="btn-leave-editor">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+        Zurück
+      </button>
+      <div class="editor-title" id="editor-title-text">Layout (1920×1080)</div>
+      <div class="editor-header-right">
+        <button class="icon-btn danger" id="btn-delete-page" title="Seite löschen" style="display:none;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+        </button>
+        <button class="ctrl-btn primary" id="btn-download-svg" style="display:flex; align-items:center; gap:6px;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+          SVG
+        </button>
+        <button class="ctrl-btn primary" id="btn-download" style="display:flex; align-items:center; gap:6px;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+          PNG
+        </button>
+      </div>
+    </div>
+    <div class="editor-content" id="editor-scroll-area">
+      <div id="editor-wrapper">
+        <button class="move-btn" id="btn-move-canvas" title="Grid verschieben">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="5 9 2 12 5 15"></polyline><polyline points="9 5 12 2 15 5"></polyline><polyline points="15 19 12 22 9 19"></polyline><polyline points="19 9 22 12 19 15"></polyline><line x1="2" y1="12" x2="22" y2="12"></line><line x1="12" y1="2" x2="12" y2="22"></line></svg>
+        </button>
+        <div class="editor-panel" id="editor-panel">
+          <div class="inner-glow" id="ed-inner-glow"></div>
+          <div class="grain-layer" id="ed-grain"></div>
+          <div class="star" id="ed-star"></div>
+        </div>
+      </div>
+    </div>
+    <div class="editor-footer" style="position:relative;">
+      <div id="logo-mode-wrap">
+        <label class="logo-cb-label">
+          <input type="checkbox" id="logo-mode-cb">
+          <span>Logo</span>
+        </label>
+      </div>
+      <button class="ctrl-btn" id="btn-prev-page">◀</button>
+      <div class="pagination-text" id="pagination-text">Seite 1 von 1</div>
+      <button class="ctrl-btn" id="btn-next-page">▶</button>
+      <button class="ctrl-btn" id="btn-add-page" style="margin-left:24px;">+ Seite hinzufügen</button>
+      <div class="editor-scale-bar" id="ed-scale-bar">
+        <label>Skalierung</label>
+        <div class="scale-group" id="ed-scale-group">
+          <div id="ed-scale-single">
+            <input type="range" id="ed-scale-slider" min="1" max="8" value="2" step="1">
+            <span class="scale-value" id="ed-scale-value">2</span>
+          </div>
+          <div class="scale-dual" id="ed-scale-dual" style="display:none;">
+            <div class="scale-row">
+              <label>Grid</label>
+              <input type="range" id="ed-arrow-scale-slider" min="1" max="8" value="2" step="1" style="width:90px;">
+              <span class="scale-value" id="ed-arrow-scale-value">2</span>
+            </div>
+            <div class="scale-row">
+              <label>Fokus</label>
+              <input type="range" id="ed-star-scale-slider" min="1" max="8" value="2" step="1" style="width:90px;">
+              <span class="scale-value" id="ed-star-scale-value">2</span>
+            </div>
+          </div>
+          <button class="lock-btn locked" id="ed-lock-btn" title="Skalierung koppeln/entkoppeln">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== FORMAT MODAL ===== -->
+  <div id="modal-overlay">
+    <div id="modal">
+      <h2 style="margin-bottom:16px;">Neues Format</h2>
+      <div style="margin-bottom:12px;">
+        <label style="font-size:12px; color:#aaa; display:block; margin-bottom:8px;">Vorlagen</label>
+        <div style="display:flex; flex-wrap:wrap;">
+          <button class="format-btn" data-w="1920" data-h="1080">16:9</button>
+          <button class="format-btn" data-w="1080" data-h="1350">4:5</button>
+          <button class="format-btn" data-w="1000" data-h="1000">1:1</button>
+          <button class="format-btn" data-w="1400" data-h="300">Banner</button>
+        </div>
+      </div>
+      <div class="modal-row">
+        <div>
+          <label style="font-size:12px; color:#aaa;">Breite</label>
+          <input type="number" class="modal-input" id="fmt-width" placeholder="1920" value="1920">
+        </div>
+        <div>
+          <label style="font-size:12px; color:#aaa;">Höhe</label>
+          <input type="number" class="modal-input" id="fmt-height" placeholder="1080" value="1080">
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="ctrl-btn" id="btn-modal-cancel">Abbrechen</button>
+        <button class="ctrl-btn primary" id="btn-modal-confirm">Erstellen</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== HUB VIEW ===== -->
+  <div id="hub-view">
+    <div class="hub-header">
+      <div class="hub-eyebrow">mc-quadrat · Design System</div>
+      <h1 class="hub-title"><span>mc</span> Brand Hub</h1>
+    </div>
+    <div class="hub-sections">
+
+      <!-- ===== SECTION: DOWNLOAD & CORPORATE DESIGN ===== -->
+      <div>
+        <div class="hub-section-label">Download &amp; Corporate Design</div>
+        <div class="hub-grid">
+
+          <!-- Tile: Logo -->
+          <div class="hub-tile" id="tile-logo">
+            <div class="hub-tile-icon">
+              <svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+            </div>
+            <div class="hub-tile-title">Logo</div>
+            <div class="hub-tile-desc">Download offizieller Logo-Dateien</div>
+          </div>
+
+          <!-- Tile: Farben -->
+          <div class="hub-tile" id="tile-farben">
+            <div class="hub-tile-icon">
+              <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 0 1 0 20"/><path d="M12 12 2 12"/></svg>
+            </div>
+            <div class="hub-tile-title">Farben</div>
+            <div class="hub-tile-desc">Farbwerte kopieren und anwenden</div>
+          </div>
+
+          <!-- Tile: Teams Hintergrund -->
+          <div class="hub-tile" id="tile-teams">
+            <div class="hub-tile-icon">
+              <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            </div>
+            <div class="hub-tile-title">Teams Hintergrund</div>
+            <div class="hub-tile-desc">Hintergründe für digitale Meetings</div>
+          </div>
+
+          <!-- Tile: Bildwelt (teaser) -->
+          <div class="hub-tile soon">
+            <div class="hub-tile-icon">
+              <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+            </div>
+            <div class="hub-tile-title">Bildwelt</div>
+            <div class="hub-tile-desc">Motive im definierten Markenstil</div>
+            <span class="soon-badge">Demnächst</span>
+          </div>
+
+          <!-- Tile: Icons (teaser) – ausgeblendet für ein symmetrisches Raster -->
+          <div class="hub-tile soon" style="display:none;">
+            <div class="hub-tile-icon">
+              <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M2 12h3M19 12h3M4.22 19.78l2.12-2.12M17.66 6.34l2.12-2.12"/></svg>
+            </div>
+            <div class="hub-tile-title">Icons</div>
+            <div class="hub-tile-desc">Das vollständige Icon-Set.</div>
+            <span class="soon-badge">Demnächst</span>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ===== SECTION: WEB GENERATOREN ===== -->
+      <div>
+        <div class="hub-section-label">Web Generatoren</div>
+        <div class="hub-grid">
+
+          <!-- Tile: Keyvisual -->
+          <div class="hub-tile" id="tile-keyvisual">
+            <div class="hub-tile-icon">
+              <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            </div>
+            <div class="hub-tile-title">Keyvisual</div>
+            <div class="hub-tile-desc">Erstellung individueller Layouts</div>
+          </div>
+
+          <!-- Tile: Dashboard -->
+          <div class="hub-tile" id="tile-dashboard">
+            <div class="hub-tile-icon">
+              <svg viewBox="0 0 24 24"><rect x="3" y="3" width="8" height="10"/><rect x="13" y="3" width="8" height="5"/><rect x="3" y="15" width="8" height="6"/><rect x="13" y="10" width="8" height="11"/></svg>
+            </div>
+            <div class="hub-tile-title">Dashboard</div>
+            <div class="hub-tile-desc">Kennzahlen-Slides im 16:9-Format</div>
+          </div>
+
+          <!-- Tile: Animation -->
+          <div class="hub-tile" id="tile-animation">
+            <div class="hub-tile-icon">
+              <svg viewBox="0 0 24 24"><path d="M11 12l4.5-4.5L20 12l-4.5 4.5z"/><line x1="3" y1="8.5" x2="7.5" y2="8.5"/><line x1="3" y1="12" x2="6" y2="12"/><line x1="3" y1="15.5" x2="7.5" y2="15.5"/></svg>
+            </div>
+            <div class="hub-tile-title">Animation</div>
+            <div class="hub-tile-desc">Animiertes Muster für Web und Video</div>
+          </div>
+
+          <!-- Tile: Intranet Kachel -->
+          <div class="hub-tile" id="tile-intranet">
+            <div class="hub-tile-icon">
+              <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="15" r="3.2"/><path d="M9 15h.01M14 8h7M14 12h7M14 16h4"/></svg>
+            </div>
+            <div class="hub-tile-title">Intranet Kachel</div>
+            <div class="hub-tile-desc">Bildkacheln für alle Intranet-Formate</div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ===== SECTION: LOGO ===== -->
+  <div id="section-logo" class="section-panel">
+    <div class="section-header">
+      <button class="section-back" id="back-from-logo">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+        Zurück
+      </button>
+      <div class="section-header-title">Logo</div>
+    </div>
+    <div class="section-body">
+
+      <div>
+        <div class="filter-label">Variante</div>
+        <div class="filter-group" id="logo-variant-group">
+          <button class="filter-chip active" data-variant="logo">Logo</button>
+          <button class="filter-chip" data-variant="claim">Logo mit Claim</button>
+          <button class="filter-chip" data-variant="short">Short Logo</button>
+        </div>
+      </div>
+
+      <div class="logo-layout">
+        <!-- Weiß auf Schwarz -->
+        <div class="logo-preview-col">
+          <div class="logo-preview-wrap bg-dark">
+            <img id="logo-preview-white" src="" alt="Logo Vorschau – Weiß">
+          </div>
+          <div class="logo-download-row">
+            <button class="download-btn secondary" id="btn-logo-svg-white">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+              SVG
+            </button>
+            <button class="download-btn" id="btn-logo-png-white">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+              PNG
+            </button>
+          </div>
+        </div>
+
+        <!-- Schwarz auf Weiß -->
+        <div class="logo-preview-col">
+          <div class="logo-preview-wrap bg-light">
+            <img id="logo-preview-black" src="" alt="Logo Vorschau – Schwarz">
+          </div>
+          <div class="logo-download-row">
+            <button class="download-btn secondary" id="btn-logo-svg-black">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+              SVG
+            </button>
+            <button class="download-btn" id="btn-logo-png-black">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+              PNG
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="logo-size-input-wrap" style="margin-top:18px;">
+        <label>PNG-Breite in px (für beide Farben)</label>
+        <div style="display:flex; align-items:center; gap:4px;">
+          <input type="number" class="logo-size-input" id="logo-png-width" value="800" min="100" max="8000">
+          <span class="logo-size-unit">px</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ===== SECTION: FARBEN ===== -->
+  <div id="section-farben" class="section-panel">
+    <div class="section-header">
+      <button class="section-back" id="back-from-farben">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+        Zurück
+      </button>
+      <div class="section-header-title">Farben</div>
+    </div>
+    <div class="section-body">
+      <p class="colors-intro">Auf eine Farbe klicken, um den Hex-Wert in die Zwischenablage zu kopieren.</p>
+      <div class="colors-grid" id="colors-grid"></div>
+    </div>
+  </div>
+
+  <!-- ===== SECTION: TEAMS ===== -->
+  <div id="section-teams" class="section-panel">
+    <div class="section-header">
+      <button class="section-back" id="back-from-teams">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+        Zurück
+      </button>
+      <div class="section-header-title">Teams Hintergrund</div>
+    </div>
+    <div class="section-body">
+      <div class="teams-grid" id="teams-grid"></div>
+    </div>
+  </div>
+
+  <!-- ===== DASHBOARD GENERATOR ===== -->
+  <div id="dash-view">
+    <div class="dash-header">
+      <div class="dash-header-left">
+        <button class="section-back" id="dash-back">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+          Zurück
+        </button>
+        <div class="dash-title">Dashboard</div>
+      </div>
+      <div class="dash-header-right">
+        <button class="ctrl-btn" id="dash-save-json">Projekt sichern</button>
+        <button class="ctrl-btn" id="dash-load-json">Projekt laden</button>
+        <button class="ctrl-btn" id="dash-reset">Zurücksetzen</button>
+        <button class="ctrl-btn primary" id="dash-export-svg" style="display:flex; align-items:center; gap:6px;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+          SVG
+        </button>
+        <button class="ctrl-btn primary" id="dash-export-png" style="display:flex; align-items:center; gap:6px;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+          PNG
+        </button>
+      </div>
+    </div>
+
+    <div class="dash-body">
+      <div class="dash-stage">
+        <div id="dash-wrapper">
+          <svg id="dash-svg" viewBox="0 0 1920 1080" xmlns="http://www.w3.org/2000/svg"></svg>
+          <div id="dash-overlay"></div>
+        </div>
+      </div>
+      <div class="dash-sidebar-outer">
+        <div class="dash-sidebar-topbar">
+          <button class="ctrl-btn primary" id="dash-add-card" style="display:flex; align-items:center; gap:7px; padding:7px 18px;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            Kachel
+          </button>
+        </div>
+        <aside class="dash-sidebar" id="dash-sidebar"></aside>
+      </div>
+    </div>
+
+    <div class="dash-footer">
+      <label class="logo-cb-label" id="dash-autogrid-wrap" style="margin-right:16px;">
+        <input type="checkbox" id="dash-autogrid" checked>
+        <span>Auto-Raster</span>
+      </label>
+      <button class="ctrl-btn" id="dash-prev-page">◀</button>
+      <div class="pagination-text" id="dash-pagination">Seite 1 von 1</div>
+      <button class="ctrl-btn" id="dash-next-page">▶</button>
+      <button class="ctrl-btn" id="dash-add-page" style="margin-left:24px;">+ Seite hinzufügen</button>
+      <button class="ctrl-btn" id="dash-dup-page">Seite duplizieren</button>
+      <button class="icon-btn danger" id="dash-del-page" title="Seite löschen" style="margin-left:8px;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- ===== DASHBOARD: KACHEL-TYP MODAL ===== -->
+  <div id="dash-type-overlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:200; justify-content:center; align-items:center;">
+    <div style="background:#111111; border:1px solid rgba(255,255,255,0.18); padding:28px 32px; width:420px; color:rgba(255,255,255,0.85);">
+      <h2 style="margin-bottom:16px; font-family:'Rambla Alt Oscura','Inter',sans-serif; font-size:20px;">Kachel hinzufügen</h2>
+      <div class="dash-type-grid">
+        <button class="dash-type-chip" data-type="kpi">
+          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V9M10 19V5M16 19v-7M22 19H2"/></svg>
+          <span>Kennzahl</span><small>Label, große Zahl, Veränderung</small>
+        </button>
+        <button class="dash-type-chip" data-type="statement">
+          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h9"/></svg>
+          <span>Statement</span><small>Große Aussage über mehrere Zeilen</small>
+        </button>
+        <button class="dash-type-chip" data-type="image">
+          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16"/><circle cx="8.5" cy="9.5" r="1.5"/><polyline points="21 15 16 10 5 20"/></svg>
+          <span>Bild</span><small>Foto formatfüllend, optional angeschnitten</small>
+        </button>
+        <button class="dash-type-chip" data-type="chart">
+          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 3v9l7 4"/></svg>
+          <span>Diagramm</span><small>Donut, Fläche oder Balken</small>
+        </button>
+      </div>
+      <div class="modal-actions" style="margin-top:20px;">
+        <button class="ctrl-btn" id="dash-type-cancel">Abbrechen</button>
+      </div>
+    </div>
+  </div>
+
+  <input type="file" id="dash-json-input" accept="application/json" style="display:none;">
+  <input type="file" id="dash-img-input" accept="image/*" style="display:none;">
+
+  <!-- ===== ANIMATIONS GENERATOR ===== -->
+  <div id="anim-view">
+    <div class="anim-header">
+      <div class="anim-header-left">
+        <button class="section-back" id="anim-back">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+          Zurück
+        </button>
+        <div class="anim-title">Animations Generator</div>
+      </div>
+      <div class="anim-header-right">
+        <button class="ctrl-btn" id="anim-reset">Zurücksetzen</button>
+        <button class="ctrl-btn primary anim-exp-btn" id="anim-exp-desktop">Video Querformat</button>
+        <button class="ctrl-btn primary anim-exp-btn" id="anim-exp-mobile">Video Hochformat</button>
+        <button class="ctrl-btn primary anim-exp-btn" id="anim-exp-gif">GIF</button>
+      </div>
+    </div>
+
+    <div class="anim-body">
+      <div class="anim-stage">
+        <div class="anim-card-wrap">
+          <div class="anim-card desktop" id="anim-card-desktop">
+            <div class="anim-overlay"><h2>Blindtext Headline</h2></div>
+          </div>
+          <div class="anim-cap">Querformat</div>
+        </div>
+        <div class="anim-card-wrap">
+          <div class="anim-card mobile" id="anim-card-mobile">
+            <div class="anim-overlay"><h2>Blindtext Headline</h2></div>
+          </div>
+          <div class="anim-cap">Hochformat</div>
+        </div>
+      </div>
+
+      <aside class="anim-sidebar">
+        <div class="dash-side-label">Vorlagen</div>
+        <div class="anim-presets" id="anim-presets"></div>
+        <div id="anim-controls"></div>
+
+        <div class="anim-group">
+          <div class="dash-side-label">GIF-Einstellungen</div>
+          <div class="anim-ctrl">
+            <div class="anim-ctrl-row"><label>Breite in px</label></div>
+            <select class="dash-input" id="anim-gif-width">
+              <option>600</option><option>800</option><option selected>1000</option><option>1200</option>
+            </select>
+          </div>
+          <div class="anim-ctrl">
+            <div class="anim-ctrl-row"><label>Bilder pro Sekunde</label></div>
+            <select class="dash-input" id="anim-gif-fps">
+              <option>8</option><option>10</option><option selected>12</option><option>15</option>
+            </select>
+          </div>
+        </div>
+      </aside>
+    </div>
+
+    <div class="anim-footer" id="anim-status">
+      Video nimmt die jeweilige Karte samt Headline auf. Das GIF enthält nur das Muster als eine Kachelreihe – vertikal nahtlos wiederholbar.
+    </div>
+  </div>
+
+  <!-- ===== INTRANET KACHEL GENERATOR ===== -->
+  <div id="itk-view">
+    <div class="itk-header">
+      <div class="itk-header-left">
+        <button class="section-back" id="itk-back">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+          Zurück
+        </button>
+        <div class="itk-title">Intranet Kachel</div>
+      </div>
+      <button class="ctrl-btn primary" id="itk-download" style="display:flex; align-items:center; gap:6px;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+        JPG herunterladen
+      </button>
+    </div>
+
+    <div class="itk-body">
+      <!-- LINKS: Bild + Bedienelemente -->
+      <div class="itk-editor">
+
+        <div class="itk-sticky-preview">
+          <div class="dash-side-label">Motiv (1180 × 623 px) · Vorschau</div>
+          <div class="itk-canvas-wrap" id="itk-canvas-wrap">
+            <canvas id="itk-canvas" width="1180" height="623"></canvas>
+            <div class="itk-drop-hint" id="itk-drop-hint">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+              <p>Bild hier ablegen</p>
+              <p class="sub">oder unten „Bild auswählen“</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="itk-group">
+          <div class="itk-btn-row">
+            <button class="ctrl-btn" id="itk-upload-btn">Bild auswählen</button>
+            <button class="ctrl-btn" id="itk-remove-btn">Bild entfernen</button>
+          </div>
+          <input type="file" id="itk-file-input" accept="image/*" style="display:none">
+        </div>
+
+        <div class="itk-group">
+          <div class="dash-side-label">Zoom &amp; Position</div>
+          <div class="anim-ctrl-row"><label>Zoom</label><span class="anim-val" id="itk-zoom-val">100%</span></div>
+          <input type="range" id="itk-zoom-slider" min="5" max="500" value="100" step="1" style="width:100%;">
+          <div class="itk-btn-row">
+            <button class="ctrl-btn" id="itk-fit-btn">Einpassen</button>
+            <button class="ctrl-btn" id="itk-fill-btn">Füllen</button>
+            <button class="ctrl-btn" id="itk-center-btn">Zentrieren</button>
+          </div>
+        </div>
+
+        <div class="itk-group">
+          <div class="dash-side-label">Verlaufshintergrund</div>
+          <div class="itk-swatch-grid" id="itk-grad-grid"></div>
+          <div class="anim-ctrl-row" style="margin-top:12px;"><label>Größe</label><span class="anim-val" id="itk-grad-scale-val">100%</span></div>
+          <input type="range" id="itk-grad-scale-slider" min="40" max="300" value="100" step="1" style="width:100%;">
+        </div>
+
+        <div class="itk-group">
+          <div class="dash-side-label">Design-Position (für den Verlauf)</div>
+          <div class="itk-layout-grid" id="itk-layout-grid"></div>
+          <div class="itk-mode-row">
+            <button class="ctrl-btn active" id="itk-mode-photo" title="Motiv verschieben">Motiv schieben</button>
+            <button class="ctrl-btn" id="itk-mode-grad" title="Verlauf verschieben">Verlauf schieben</button>
+            <button class="ctrl-btn" id="itk-reset-grad-btn">Verlauf zurücksetzen</button>
+          </div>
+        </div>
+
+        <div class="itk-group">
+          <div class="dash-side-label">Icon · immer zentriert auf der Bildfläche</div>
+          <select class="dash-input" id="itk-icon-select">
+            <option value="none">Kein Icon</option>
+            <option value="party">Party</option>
+            <option value="aufruf">Aufruf</option>
+            <option value="event">Event</option>
+            <option value="team">Team</option>
+            <option value="emotionen">Emotionen</option>
+            <option value="__upload__">Eigenes SVG hochladen …</option>
+          </select>
+          <input type="file" id="itk-icon-file-input" accept=".svg,image/svg+xml" style="display:none">
+        </div>
+
+      </div>
+
+      <!-- RECHTS: klar gekennzeichneter Vorschaubereich -->
+      <div class="itk-previews">
+        <div class="itk-preview-eyebrow">Vorschau</div>
+        <div class="itk-preview-sub">So erscheint das Motiv in allen Ausspielarten des Intranets – aktualisiert sich live.</div>
+        <div class="itk-preview-grid" id="itk-preview-grid"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== TOAST ===== -->
+  <div id="toast">Hex-Wert kopiert!</div>
+
+  <script src="app.js"></script>
+  <script src="dashboard.js"></script>
+  <script src="pattern-engine.js"></script>
+  <script src="pattern.js"></script>
+  <script src="intranet.js"></script>
+</body>
+</html>
