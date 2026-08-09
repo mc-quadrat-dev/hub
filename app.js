@@ -418,8 +418,9 @@ class ArrowEngine {
 
   resizePanel() {
     if (!this.isEditor) return;
-    const pw = window.innerWidth - 80;
-    const ph = window.innerHeight - 160;
+    const mobile = window.innerWidth <= 760;
+    const pw = window.innerWidth - (mobile ? 24 : 80);
+    const ph = window.innerHeight - (mobile ? 170 : 160);
     const scale = Math.min(pw / this.width, ph / this.height, 1);
     const wrapper = document.getElementById('editor-wrapper');
     if (scale < 1) {
@@ -741,21 +742,29 @@ const btnMove = document.getElementById('btn-move-canvas');
 let movingCanvas = false;
 let moveStartX, moveStartY, initOffX, initOffY, initStarX, initStarY;
 
-btnMove.addEventListener('mousedown', (e) => {
+function moveCanvasPoint(e) {
+  const t = e.touches ? e.touches[0] : e;
+  return { x: t.clientX, y: t.clientY };
+}
+
+function onMoveDown(e) {
   e.preventDefault();
   movingCanvas = true;
-  moveStartX = e.clientX; moveStartY = e.clientY;
+  const p0 = moveCanvasPoint(e);
+  moveStartX = p0.x; moveStartY = p0.y;
   const p = pages[activePageIdx];
   initOffX = p.offsetX || 0; initOffY = p.offsetY || 0;
   initStarX = p.starX; initStarY = p.starY;
   document.body.style.cursor = 'grabbing';
-});
+}
 
-window.addEventListener('mousemove', (e) => {
+function onMoveMove(e) {
   if (!movingCanvas) return;
+  e.preventDefault();
+  const pt = moveCanvasPoint(e);
   const scale = editorEngine.container.getBoundingClientRect().width / editorEngine.width;
-  const dx = (e.clientX - moveStartX) / scale;
-  const dy = (e.clientY - moveStartY) / scale;
+  const dx = (pt.x - moveStartX) / scale;
+  const dy = (pt.y - moveStartY) / scale;
   const p = pages[activePageIdx];
   p.offsetX = initOffX + dx;
   p.offsetY = initOffY + dy;
@@ -766,14 +775,21 @@ window.addEventListener('mousemove', (e) => {
   editorEngine.offsetX = p.offsetX;
   editorEngine.offsetY = p.offsetY;
   editorEngine.init(p.w, p.h, p.starX, p.starY, p.arrowScale, p.starScale, p.offsetX, p.offsetY);
-});
+}
 
-window.addEventListener('mouseup', () => {
+function onMoveUp() {
   if (movingCanvas) {
     movingCanvas = false;
     document.body.style.cursor = '';
   }
-});
+}
+
+btnMove.addEventListener('mousedown', onMoveDown);
+window.addEventListener('mousemove', onMoveMove);
+window.addEventListener('mouseup', onMoveUp);
+btnMove.addEventListener('touchstart', onMoveDown, { passive: false });
+window.addEventListener('touchmove', onMoveMove, { passive: false });
+window.addEventListener('touchend', onMoveUp);
 
 // --- RENDER PAGE ---
 const pagText = document.getElementById('pagination-text');
