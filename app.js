@@ -1195,7 +1195,16 @@ const TEAMS_DIR = 'assets/teams/';
 const TEAMS_IMG_EXT = ['png', 'jpg', 'jpeg'];
 // Bekannte, aktuelle Dateien als Rückfallebene, falls die Verzeichnis-Erkennung
 // scheitert (z. B. andere Hosting-Umgebung ohne Verzeichnislisten oder file://).
-const TEAMS_FALLBACK = ['v1.png', 'v2.png'];
+// Wichtig: über file:// (Doppelklick auf index.html) kann der Browser den
+// Ordner grundsätzlich nicht auflisten – dann greift IMMER diese Liste. Wird
+// eine Datei in assets/teams/ umbenannt/hinzugefügt/entfernt, muss sie hier
+// von Hand nachgezogen werden, ODER die Seite über einen lokalen Server
+// (z. B. „npx serve" im Projektordner) statt per Doppelklick geöffnet werden –
+// dann erkennt die Verzeichnisliste jede Änderung automatisch.
+const TEAMS_FALLBACK = [
+  'mc_Teams_HG_1.jpeg', 'mc_Teams_HG_2.jpeg', 'mc_Teams_HG_3.jpeg', 'mc_Teams_HG_4.jpeg',
+  'mc_Teams_HG_5.jpeg', 'mc_Teams_HG_6.jpeg', 'mc_Teams_HG_7.jpeg'
+];
 
 let teamsGridBuilt = false;
 
@@ -1209,7 +1218,7 @@ let teamsGridBuilt = false;
    auf file:// oder ohne jede Verzeichnisliste greift der Fallback. */
 async function listTeamsFiles() {
   try {
-    const res = await fetch(TEAMS_DIR, { headers: { Accept: 'application/json' } });
+    const res = await fetch(TEAMS_DIR, { headers: { Accept: 'application/json' }, cache: 'no-store' });
     if (!res.ok) throw new Error(String(res.status));
     const text = await res.text();
 
