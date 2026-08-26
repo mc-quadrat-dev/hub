@@ -12,34 +12,126 @@ const ITK_W = 1180, ITK_H = 623;
 const ITK_LIME = '#cefb0b';
 
 // ---------------------------------------------------------------------
-// 1. FORMATE (Unily-Intranet-Ausspielformate, unverändert aus der Vorlage)
+// 1. FORMATE (Unily-Intranet-Ausspielformate)
+// „main“ = die 3 bereits produktiv genutzten Formate, oben hervorgehoben.
+// „more“ = weitere verfügbare Formate.
 // ---------------------------------------------------------------------
 const ITK_FORMATS = [
-  { name: 'Main Image',             w: 1180, h: 623, scale: 0.40 },
-  { name: 'Story Page',             w: 1108, h: 623, scale: 0.35 },
-  { name: 'Large Panorama',         w: 1140, h: 380, scale: 0.35 },
-  { name: 'Widget Main',            w: 755,  h: 424, scale: 0.35 },
-  { name: 'Widget Small',           w: 755,  h: 424, scale: 0.28 },
-  { name: 'Rollup Hero Image',      w: 565,  h: 320, scale: 0.35 },
-  { name: 'Panorama',               w: 600,  h: 400, scale: 0.35 },
-  { name: 'Smart Feed',             w: 377,  h: 368, scale: 0.38 },
-  { name: 'HD Landscape',           w: 640,  h: 360, scale: 0.32 },
-  { name: 'SD Landscape',           w: 640,  h: 480, scale: 0.28 },
-  { name: 'News Grid Large',        w: 570,  h: 570, scale: 0.28 },
-  { name: 'Large Square',           w: 720,  h: 720, scale: 0.22 },
-  { name: 'Large Rectangle',        w: 720,  h: 576, scale: 0.25 },
-  { name: 'Rectangle',              w: 720,  h: 360, scale: 0.28 },
-  { name: 'Story Page Mobile',      w: 450,  h: 255, scale: 0.38 },
-  { name: 'Microsite',              w: 308,  h: 220, scale: 0.48 },
-  { name: 'Medium Square',          w: 360,  h: 360, scale: 0.35 },
-  { name: 'Card Image',             w: 360,  h: 180, scale: 0.40 },
-  { name: 'Small Rectangle',        w: 360,  h: 288, scale: 0.35 },
-  { name: 'HD Portrait',            w: 360,  h: 640, scale: 0.28 },
-  { name: 'Stories Archive',        w: 274,  h: 274, scale: 0.42 },
-  { name: 'Stories Archive Video',  w: 271,  h: 154, scale: 0.48 },
-  { name: 'News Grid Small',        w: 285,  h: 285, scale: 0.40 },
-  { name: 'Smart Feed Small',       w: 187,  h: 119, scale: 0.65 },
-  { name: 'Small Square',           w: 55,   h: 55,  scale: 1.45 }
+  { name: 'Story Page',             w: 1108, h: 623, scale: 0.35, group: 'main' },
+  { name: 'Large Rectangle',        w: 720,  h: 576, scale: 0.25, group: 'main' },
+  { name: 'Small Rectangle',        w: 360,  h: 288, scale: 0.35, group: 'main' },
+
+  { name: 'News Panorama Large',    w: 1140, h: 431, scale: 0.35, group: 'more' },
+  { name: 'Smart Feed Big',         w: 930,  h: 440, scale: 0.30, group: 'more' },
+  { name: 'Widget Main',            w: 755,  h: 424, scale: 0.35, group: 'more' },
+  { name: 'Rectangle',              w: 720,  h: 360, scale: 0.28, group: 'more' },
+  { name: 'Panorama',               w: 600,  h: 400, scale: 0.35, group: 'more' },
+  { name: 'Smart Feed Medium',      w: 570,  h: 357, scale: 0.40, group: 'more' },
+  { name: 'Portrait Rectangle',     w: 460,  h: 542, scale: 0.32, group: 'more' },
+  { name: 'Small Panorama',         w: 450,  h: 180, scale: 0.42, group: 'more' },
+  { name: 'Card Image',             w: 360,  h: 180, scale: 0.40, group: 'more' },
+  { name: 'Microsite',              w: 308,  h: 220, scale: 0.48, group: 'more' },
+  { name: 'News Grid Small',        w: 285,  h: 285, scale: 0.40, group: 'more' },
+  { name: 'Smart Feed Small',       w: 187,  h: 119, scale: 0.65, group: 'more' }
+];
+
+function itkFormatByName(name) {
+  return ITK_FORMATS.find(f => f.name === name);
+}
+
+// ---------------------------------------------------------------------
+// 1b. WIDGET-MATRIX
+// Welches Widget spielt welches Format in welcher Ausspielungsgröße aus –
+// und mit welcher UI-Überlagerung. Dasselbe Format sieht je nach Widget
+// anders aus (Headline unten vs. Tags oben vs. gar nichts auf Mobile),
+// deshalb hängt `overlay` am Paar (Widget, Format), nicht am Format allein.
+// Quelle: Übersichtsmatrix + Referenz-PNGs „Einzelne_Formate_mit_Schutzzone“.
+// ---------------------------------------------------------------------
+const ITK_WIDGETS = [
+  { key: 'smart-feed', label: 'Smart Feed', rows: [
+    { grid: '100', slots: [
+      { format: 'Smart Feed Big',    overlay: 'smartFeedBig' },
+      { format: 'Smart Feed Medium', overlay: 'smartFeedMedium' },
+      { format: 'Smart Feed Small',  overlay: 'smartFeedSmall' },
+      { format: 'Card Image',        overlay: 'none', note: 'Mobile' },
+      { format: 'Small Rectangle',   overlay: 'none', note: 'Mobile' }
+    ] }
+  ] },
+
+  { key: 'story-banner', label: 'Story Banner', rows: [
+    { grid: '100', slots: [
+      { format: 'News Panorama Large', overlay: 'bottomHeadline' },
+      { format: 'Microsite',           overlay: 'microsite', note: 'Mobile' }
+    ] },
+    { grid: '66/33', slots: [
+      { format: 'Widget Main', overlay: 'bannerTop' },
+      { format: 'Panorama',    overlay: 'bannerTopPlain', note: 'Tablet' }
+    ] },
+    { grid: '75/25', slots: [
+      { format: 'Rectangle', overlay: 'bannerTop' }
+    ] }
+  ] },
+
+  { key: 'top-news', label: 'Top News Widget', rows: [
+    { grid: '100', slots: [
+      { format: 'News Panorama Large', overlay: 'bottomHeadline' }
+    ] },
+    { grid: '50/50', slots: [
+      { format: 'Large Rectangle', overlay: 'bottomHeadline' }
+    ] },
+    { grid: '66/33', slots: [
+      { format: 'Story Page',         overlay: 'bottomHeadline' },
+      { format: 'Portrait Rectangle', overlay: 'bottomHeadline' }
+    ] },
+    { grid: '75/25', slots: [
+      { format: 'Rectangle', overlay: 'bottomHeadline' }
+    ] }
+  ] },
+
+  { key: 'news-rollup', label: 'News Rollup', rows: [
+    { grid: '50/50', slots: [
+      { format: 'News Grid Small', overlay: 'none' }
+    ] },
+    { grid: '66/33', slots: [
+      { format: 'News Grid Small', overlay: 'none' }
+    ] }
+  ] },
+
+  { key: 'news-carousel', label: 'News Carousel', rows: [
+    { grid: '100', slots: [
+      { format: 'Large Rectangle', overlay: 'tagsTop' }
+    ] },
+    { grid: '66/33', slots: [
+      { format: 'Large Rectangle', overlay: 'tagsTop' },
+      { format: 'Small Rectangle', overlay: 'tagsTop' }
+    ] },
+    { grid: '75/25', slots: [
+      { format: 'Large Rectangle', overlay: 'tagsTop' },
+      { format: 'Small Rectangle', overlay: 'tagsTop' }
+    ] }
+  ] },
+
+  { key: 'story-carousel', label: 'Story Carousel', rows: [
+    { grid: '100', slots: [
+      { format: 'Large Rectangle', overlay: 'tagsTop' }
+    ] },
+    { grid: '66/33', slots: [
+      { format: 'Large Rectangle', overlay: 'tagsTop' },
+      { format: 'Small Rectangle', overlay: 'tagsTop' }
+    ] },
+    { grid: '75/25', slots: [
+      { format: 'Large Rectangle', overlay: 'tagsTop' },
+      { format: 'Small Rectangle', overlay: 'tagsTop' }
+    ] }
+  ] },
+
+  { key: 'story-cards', label: 'Personalised Story Cards', rows: [
+    { grid: '100', slots: [
+      { format: 'Large Rectangle', overlay: 'storyCard' },
+      { format: 'Large Rectangle', overlay: 'none', note: 'Mobile' },
+      { format: 'Small Panorama',  overlay: 'none', note: 'Mobile' }
+    ] }
+  ] }
 ];
 
 // ---------------------------------------------------------------------
@@ -97,6 +189,8 @@ let itkCustomIconLabel = 'Eigenes SVG';
 let itkIsDragging = false, itkDragSX = 0, itkDragSY = 0, itkDragIX = 0, itkDragIY = 0;
 let itkPinchDist = 0, itkPinchScale = 1;
 let itkMounted = false;
+let itkWidget = 'none';          // 'none' (alle Formate) | Key aus ITK_WIDGETS
+let itkShowDanger = true;        // rote Schutzzone in der Widget-Vorschau
 
 // ---------------------------------------------------------------------
 // 6. DOM
@@ -251,7 +345,15 @@ function itkRedraw() {
     }
   }
 
-  itkPreviewCanvases.forEach(({ canvas, fmt }) => itkCenterCrop(itkCanvas, fmt.w, fmt.h, canvas));
+  // Vorschauen: erst der unveränderte Zuschnitt, dann – nur im Widget-Modus –
+  // die UI-Überlagerung obendrauf. Die Überlagerung landet ausschließlich auf
+  // diesen Kopien, nie auf itkCanvas, deshalb kann sie den JPG-Export nicht
+  // erreichen.
+  itkPreviewCanvases.forEach(rec => {
+    itkCenterCrop(itkCanvas, rec.fmt.w, rec.fmt.h, rec.canvas);
+    const draw = ITK_OVERLAYS[rec.overlay];
+    if (draw) draw(rec.canvas.getContext('2d'), rec.fmt.w, rec.fmt.h, itkShowDanger);
+  });
 }
 
 function itkCenterCrop(src, tW, tH, dest) {
@@ -266,6 +368,331 @@ function itkCenterCrop(src, tW, tH, dest) {
   dc.clearRect(0, 0, dest.width, dest.height);
   dc.drawImage(src, cropX, cropY, cropW, cropH, 0, 0, dest.width, dest.height);
 }
+
+// ---------------------------------------------------------------------
+// 8b. UI-ÜBERLAGERUNGEN für die Widget-Vorschau
+// Bilden nach, was das Intranet über die Kachel legt: Schatten-Scrim,
+// Schutzzone („Danger“), Headline-Texte, Tag-Pillen, Avatare. Sie landen
+// ausschließlich auf den Vorschau-Canvases – der Master-Canvas und damit
+// der JPG-Export bleiben unberührt.
+// Alle Maße relativ, damit jede Formatgröße stimmig bleibt.
+// ---------------------------------------------------------------------
+const ITK_OV_RED  = 'rgba(214, 8, 18, 0.60)';
+const ITK_OV_PINK = '#e5007d';
+// Bewusst ein neutraler Sans statt Rambla Alt: die Überlagerung stellt die
+// Intranet-Oberfläche dar, nicht die mc-Marke.
+const ITK_OV_FONT = "'Inter', 'Helvetica Neue', Arial, sans-serif";
+const ITK_OV_HEAD = 'Lorem ipsum dolor sit amet consetetur sadipscing elitr';
+// Beispielwerte für die UI-Zeilen, an den echten Screenshots orientiert.
+const ITK_OV_VIEWS = '362';
+const ITK_OV_LIKES = '12';
+const ITK_OV_PAGE  = '1 von 5';
+const ITK_OV_NAME  = 'Max Mustermensch';
+const ITK_OV_META  = 'in 2 Jahren | 94 Abrufe | 1 Reaktion';
+
+/* Typografische Einheit: geometrisches Mittel aus Breite und Höhe. An den
+   Referenzbildern abgeglichen – die Headline liegt dort quer über alle
+   Seitenverhältnisse bei rund 0.053 · u, was mit reinem w oder h nicht
+   hinkommt (Hoch- und Querformate liefen sonst deutlich auseinander). */
+function itkOvUnit(w, h) { return Math.sqrt(w * h); }
+
+function itkOvDanger(ctx, x, y, w, h, show) {
+  if (!show) return;
+  ctx.fillStyle = ITK_OV_RED;
+  ctx.fillRect(x, y, w, h);
+}
+
+/* Schatten-Scrim. Kräftig und mit weichem Auslauf – in der echten Oberfläche
+   ist der Verlauf deutlich dunkler, als eine einfache 50-%-Fläche vermuten
+   lässt, sonst wirkt die Vorschau harmloser als die Realität. */
+function itkOvScrim(ctx, x, y, w, h, fromTop, strength) {
+  const s = strength == null ? 0.88 : strength;
+  const g = ctx.createLinearGradient(0, fromTop ? y : y + h, 0, fromTop ? y + h : y);
+  g.addColorStop(0, 'rgba(0,0,0,' + s + ')');
+  g.addColorStop(0.45, 'rgba(0,0,0,' + (s * 0.45).toFixed(3) + ')');
+  g.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = g;
+  ctx.fillRect(x, y, w, h);
+}
+
+function itkOvText(ctx, text, x, y, size, weight, align) {
+  ctx.font = (weight || 400) + ' ' + size + 'px ' + ITK_OV_FONT;
+  ctx.fillStyle = '#ffffff';
+  ctx.textAlign = align || 'left';
+  ctx.textBaseline = 'alphabetic';
+  ctx.fillText(text, x, y);
+}
+
+function itkOvPill(ctx, x, y, w, h) {
+  const r = h / 2;
+  ctx.fillStyle = ITK_OV_PINK;
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.arc(x + w - r, y + r, r, -Math.PI / 2, Math.PI / 2);
+  ctx.lineTo(x + r, y + h);
+  ctx.arc(x + r, y + r, r, Math.PI / 2, -Math.PI / 2);
+  ctx.closePath();
+  ctx.fill();
+}
+
+function itkOvCircle(ctx, cx, cy, r) {
+  ctx.fillStyle = ITK_OV_PINK;
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+// --- Echte UI-Icons (Auge, Herz, Pause, Chevrons) statt Platzhaltertexten ---
+// Alle zeichnen um (x, y) als Mittelpunkt, Kantenlänge s.
+
+function itkOvIconEye(ctx, x, y, s) {
+  ctx.save();
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineWidth = s * 0.09;
+  ctx.beginPath();
+  ctx.moveTo(x - s * 0.5, y);
+  ctx.quadraticCurveTo(x, y - s * 0.46, x + s * 0.5, y);
+  ctx.quadraticCurveTo(x, y + s * 0.46, x - s * 0.5, y);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(x, y, s * 0.15, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function itkOvIconHeart(ctx, x, y, s) {
+  ctx.save();
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineWidth = s * 0.09;
+  ctx.lineJoin = 'round';
+  ctx.beginPath();
+  ctx.moveTo(x, y + s * 0.34);
+  ctx.bezierCurveTo(x - s * 0.56, y - s * 0.02, x - s * 0.30, y - s * 0.46, x, y - s * 0.14);
+  ctx.bezierCurveTo(x + s * 0.30, y - s * 0.46, x + s * 0.56, y - s * 0.02, x, y + s * 0.34);
+  ctx.closePath();
+  ctx.stroke();
+  ctx.restore();
+}
+
+function itkOvIconPause(ctx, x, y, s) {
+  ctx.save();
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineWidth = s * 0.07;
+  ctx.beginPath();
+  ctx.arc(x, y, s * 0.5, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.fillStyle = '#ffffff';
+  const bw = s * 0.085, bh = s * 0.34;
+  ctx.fillRect(x - s * 0.155, y - bh / 2, bw, bh);
+  ctx.fillRect(x + s * 0.07, y - bh / 2, bw, bh);
+  ctx.restore();
+}
+
+/* dir: 1 = Spitze links („zurück“), -1 = Spitze rechts („weiter“) */
+function itkOvIconChevron(ctx, x, y, s, dir) {
+  ctx.save();
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineWidth = s * 0.13;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  const d = s * 0.24 * dir;
+  ctx.beginPath();
+  ctx.moveTo(x + d, y - s * 0.30);
+  ctx.lineTo(x - d, y);
+  ctx.lineTo(x + d, y + s * 0.30);
+  ctx.stroke();
+  ctx.restore();
+}
+
+/* Reaktionszeile unten links: Auge + Aufrufe, Herz + Reaktionen. */
+function itkOvStatsRow(ctx, y, u, pad) {
+  const s = 0.030 * u, ts = 0.026 * u, gap = s * 0.4;
+  ctx.font = '400 ' + ts + 'px ' + ITK_OV_FONT;
+  let x = pad;
+  itkOvIconEye(ctx, x + s / 2, y, s);
+  x += s + gap;
+  itkOvText(ctx, ITK_OV_VIEWS, x, y + ts * 0.36, ts, 400);
+  x += ctx.measureText(ITK_OV_VIEWS).width + s * 0.85;
+  itkOvIconHeart(ctx, x + s / 2, y, s);
+  x += s + gap;
+  itkOvText(ctx, ITK_OV_LIKES, x, y + ts * 0.36, ts, 400);
+}
+
+/* Karussell-Steuerung unten rechts: Pause, ‹ , „1 von 5“, › – von rechts
+   nach links gesetzt, damit die Zeile immer am rechten Rand ausgerichtet ist. */
+function itkOvPlayerRow(ctx, w, y, u, pad) {
+  const s = 0.032 * u, ts = 0.026 * u, gap = s * 0.5;
+  let x = w - pad;
+  itkOvIconChevron(ctx, x - s / 2, y, s, -1);
+  x -= s + gap;
+  ctx.font = '400 ' + ts + 'px ' + ITK_OV_FONT;
+  const tw = ctx.measureText(ITK_OV_PAGE).width;
+  itkOvText(ctx, ITK_OV_PAGE, x, y + ts * 0.36, ts, 400, 'right');
+  x -= tw + gap;
+  itkOvIconChevron(ctx, x - s / 2, y, s, 1);
+  x -= s + gap * 1.4;
+  itkOvIconPause(ctx, x - s / 2, y, s);
+}
+
+/* Text auf die verfügbare Breite kürzen – die echte UI schneidet mit „…“ ab. */
+function itkOvClip(ctx, text, maxW, size, weight) {
+  ctx.font = (weight || 400) + ' ' + size + 'px ' + ITK_OV_FONT;
+  if (ctx.measureText(text).width <= maxW) return text;
+  let t = text;
+  while (t.length > 1 && ctx.measureText(t + '…').width > maxW) t = t.slice(0, -1);
+  return t.replace(/\s+$/, '') + '…';
+}
+
+/* Story-Banner-Aufbau: Headline-Block oben, Personenzeile unten.
+   Panorama zeigt dort keinen Avatar, Widget Main und Rectangle schon. */
+function itkOvBanner(ctx, w, h, danger, withAvatar) {
+  const u = itkOvUnit(w, h), pad = 0.042 * u;
+  itkOvScrim(ctx, 0, 0, w, h * 0.60, true);
+  itkOvDanger(ctx, 0, 0, w, h * 0.50, danger);
+  const hs = 0.055 * u, ss = 0.030 * u;
+  itkOvText(ctx, 'Lorem ipsum dolor sit amet', pad, h * 0.19, hs, 700);
+  itkOvText(ctx, 'consetetur sadipscing elitr', pad, h * 0.30, hs, 700);
+  itkOvText(ctx, itkOvClip(ctx, ITK_OV_HEAD, w - pad * 2, ss, 400), pad, h * 0.385, ss, 400);
+  itkOvText(ctx, 'Datum der Veranstaltung: 11 Sep.', pad, h * 0.455, ss, 400);
+
+  itkOvScrim(ctx, 0, h * 0.62, w, h * 0.38, false);
+  itkOvDanger(ctx, 0, h * 0.80, w, h * 0.20, danger);
+  const ms = 0.028 * u;
+  let tx = pad;
+  if (withAvatar) {
+    const r = 0.035 * w;
+    itkOvCircle(ctx, pad + r, h * 0.895, r);
+    tx = pad + r * 2 + pad * 0.6;
+  }
+  itkOvText(ctx, ITK_OV_NAME, tx, h * 0.875, ms, 700);
+  itkOvText(ctx, itkOvClip(ctx, ITK_OV_META, w * 0.55, ms, 400), tx, h * 0.945, ms, 400);
+  itkOvPlayerRow(ctx, w, h * 0.905, u, pad);
+}
+
+const ITK_OVERLAYS = {
+  none: null,
+
+  // Headline unten – Top News Widget, News Panorama Large im Story Banner.
+  bottomHeadline(ctx, w, h, danger) {
+    const u = itkOvUnit(w, h), pad = 0.042 * u;
+    itkOvScrim(ctx, 0, h * 0.42, w, h * 0.58, false);
+    itkOvDanger(ctx, 0, h * 0.615, w, h * 0.385, danger);
+    itkOvText(ctx, 'Mission My-T', pad, h * 0.70, 0.021 * u, 400);
+    const hs = 0.053 * u;
+    itkOvText(ctx, itkOvClip(ctx, ITK_OV_HEAD, w - pad * 2, hs, 700), pad, h * 0.80, hs, 700);
+    itkOvStatsRow(ctx, h * 0.915, u, pad);
+    itkOvPlayerRow(ctx, w, h * 0.915, u, pad);
+  },
+
+  // Tag-Pillen oben + „Bereits gelesen“ – News Carousel, Story Carousel.
+  tagsTop(ctx, w, h, danger) {
+    const u = itkOvUnit(w, h), pad = 0.042 * u;
+    const pillH = 0.075 * h, gapY = 0.025 * h, padY = 0.04 * h;
+    const band = padY * 2 + pillH * 2 + gapY;
+    itkOvScrim(ctx, 0, 0, w, band * 1.25, true);
+    itkOvDanger(ctx, 0, 0, w, band, danger);
+    const pillW = 0.185 * w, gapX = 0.018 * w;
+    for (let r = 0; r < 2; r++) {
+      for (let c = 0; c < 3; c++) {
+        itkOvPill(ctx, pad + c * (pillW + gapX), padY + r * (pillH + gapY), pillW, pillH);
+      }
+    }
+    itkOvText(ctx, 'Bereits gelesen', w - pad, padY + pillH * 0.8, 0.027 * u, 400, 'right');
+  },
+
+  smartFeedBig(ctx, w, h, danger) {
+    const u = itkOvUnit(w, h), pad = 0.042 * u;
+    itkOvScrim(ctx, 0, 0, w, h * 0.55, true);
+    itkOvDanger(ctx, 0, 0, w, h * 0.48, danger);
+    const pillH = 0.062 * h, pillW = 0.15 * w, gapX = 0.017 * w;
+    for (let c = 0; c < 3; c++) itkOvPill(ctx, pad + c * (pillW + gapX), h * 0.055, pillW, pillH);
+    const hs = 0.062 * u;
+    itkOvText(ctx, 'Lorem ipsum dolor sit amet', pad, h * 0.32, hs, 700);
+    itkOvText(ctx, 'consetetur sadipscing elitr', pad, h * 0.44, hs, 700);
+
+    itkOvScrim(ctx, 0, h * 0.58, w, h * 0.42, false);
+    itkOvDanger(ctx, 0, h * 0.74, w, h * 0.26, danger);
+    const r = 0.038 * w, tx = pad + r * 2 + pad * 0.6;
+    itkOvCircle(ctx, pad + r, h * 0.855, r);
+    itkOvText(ctx, ITK_OV_NAME, tx, h * 0.845, 0.026 * u, 700);
+    itkOvText(ctx, itkOvClip(ctx, ITK_OV_META, w * 0.45, 0.024 * u, 400), tx, h * 0.915, 0.024 * u, 400);
+    itkOvStatsRow(ctx, h * 0.88, u, w - pad - 0.20 * u);
+  },
+
+  smartFeedMedium(ctx, w, h, danger) {
+    const u = itkOvUnit(w, h), pad = 0.042 * u;
+    itkOvScrim(ctx, 0, 0, w, h * 0.50, true);
+    itkOvDanger(ctx, 0, 0, w, h * 0.42, danger);
+    const pillH = 0.065 * h, pillW = 0.24 * w, gapX = 0.02 * w;
+    for (let c = 0; c < 3; c++) itkOvPill(ctx, pad + c * (pillW + gapX), h * 0.06, pillW, pillH);
+    const cr = 0.045 * w, hs = 0.055 * u, tx = pad + cr * 2 + pad * 0.5;
+    itkOvCircle(ctx, pad + cr, h * 0.265, cr);
+    itkOvText(ctx, 'Lorem ipsum dolor sit amet', tx, h * 0.28, hs, 700);
+    itkOvText(ctx, 'consetetur sadipscing elitr', tx, h * 0.38, hs, 700);
+
+    itkOvScrim(ctx, 0, h * 0.54, w, h * 0.46, false);
+    itkOvDanger(ctx, 0, h * 0.71, w, h * 0.29, danger);
+    const r = 0.055 * w, bx = pad + r * 2 + pad * 0.6;
+    itkOvCircle(ctx, pad + r, h * 0.845, r);
+    itkOvText(ctx, ITK_OV_NAME, bx, h * 0.815, 0.030 * u, 700);
+    itkOvText(ctx, itkOvClip(ctx, ITK_OV_META, w - bx - pad, 0.028 * u, 400), bx, h * 0.90, 0.028 * u, 400);
+  },
+
+  smartFeedSmall(ctx, w, h, danger) {
+    const u = itkOvUnit(w, h), pad = 0.05 * u;
+    itkOvScrim(ctx, 0, 0, w, h * 0.50, true);
+    itkOvDanger(ctx, 0, 0, w, h * 0.42, danger);
+    const pillH = 0.09 * h, pillW = 0.26 * w, gapX = 0.03 * w;
+    for (let c = 0; c < 3; c++) itkOvPill(ctx, pad + c * (pillW + gapX), h * 0.07, pillW, pillH);
+    const cr = 0.055 * w, tx = pad + cr * 2 + pad * 0.5;
+    itkOvCircle(ctx, pad + cr, h * 0.30, cr);
+    itkOvText(ctx, itkOvClip(ctx, 'Lorem ipsum dolor sit amet', w - tx - pad, 0.075 * u, 700), tx, h * 0.335, 0.075 * u, 700);
+
+    itkOvScrim(ctx, 0, h * 0.50, w, h * 0.50, false);
+    itkOvDanger(ctx, 0, h * 0.62, w, h * 0.38, danger);
+    const r = 0.075 * w, bx = pad + r * 2 + pad * 0.5;
+    itkOvCircle(ctx, pad + r, h * 0.80, r);
+    itkOvText(ctx, ITK_OV_NAME, bx, h * 0.78, 0.070 * u, 700);
+    itkOvText(ctx, itkOvClip(ctx, 'in 2 Jahren | 94 Abrufe', w - bx - pad, 0.065 * u, 400), bx, h * 0.90, 0.065 * u, 400);
+  },
+
+  bannerTop(ctx, w, h, danger)      { itkOvBanner(ctx, w, h, danger, true); },
+  bannerTopPlain(ctx, w, h, danger) { itkOvBanner(ctx, w, h, danger, false); },
+
+  // Personalised Story Cards: Headline oben, Personenzeile unten.
+  storyCard(ctx, w, h, danger) {
+    const u = itkOvUnit(w, h), pad = 0.042 * u;
+    itkOvScrim(ctx, 0, 0, w, h * 0.52, true);
+    itkOvDanger(ctx, 0, 0, w, h * 0.41, danger);
+    const hs = 0.058 * u;
+    itkOvText(ctx, 'Lorem ipsum dolor sit amet', pad, h * 0.215, hs, 700);
+    itkOvText(ctx, 'consetetur sadipscing elitr', pad, h * 0.30, hs, 700);
+    itkOvText(ctx, 'Datum', pad, h * 0.375, 0.028 * u, 400);
+
+    itkOvScrim(ctx, 0, h * 0.58, w, h * 0.42, false);
+    itkOvDanger(ctx, 0, h * 0.74, w, h * 0.26, danger);
+    const r = 0.068 * w, tx = pad + r * 2 + pad * 0.7;
+    itkOvCircle(ctx, pad + r, h * 0.845, r);
+    itkOvText(ctx, ITK_OV_NAME, tx, h * 0.83, 0.030 * u, 700);
+    itkOvText(ctx, itkOvClip(ctx, ITK_OV_META, w - tx - pad, 0.028 * u, 400), tx, h * 0.895, 0.028 * u, 400);
+  },
+
+  // Microsite-Teaser: Schutzzone über der ganzen Fläche.
+  microsite(ctx, w, h, danger) {
+    const u = itkOvUnit(w, h), pad = 0.045 * u;
+    itkOvDanger(ctx, 0, 0, w, h, danger);
+    const hs = 0.062 * u, ss = 0.040 * u;
+    itkOvText(ctx, 'Lorem ipsum dolor sit amet', pad, h * 0.29, hs, 700);
+    itkOvText(ctx, 'consetetur sadipscing elitr', pad, h * 0.40, hs, 700);
+    itkOvText(ctx, itkOvClip(ctx, 'Lorem ipsum dolor sit amet consetetur', w - pad * 2, ss, 400), pad, h * 0.49, ss, 400);
+    itkOvText(ctx, 'Datum', pad, h * 0.575, ss, 400);
+    itkOvText(ctx, ITK_OV_NAME, pad, h * 0.735, 0.038 * u, 700);
+    itkOvText(ctx, 'in 2 Jahren | 94 Abrufe', pad, h * 0.815, 0.034 * u, 400);
+    itkOvText(ctx, 'Info', pad, h * 0.885, 0.030 * u, 400);
+    itkOvStatsRow(ctx, h * 0.92, u, w - pad - 0.22 * u);
+  }
+};
 
 // ---------------------------------------------------------------------
 // 9. BILD LADEN
@@ -425,27 +852,77 @@ async function itkHandleIconUpload(file) {
   showToast('Icon „' + itkCustomIconLabel + '“ hinzugefügt');
 }
 
-function itkBuildPreviewGrid() {
-  const grid = document.getElementById('itk-preview-grid');
-  if (!grid || grid.dataset.built) return;
-  grid.dataset.built = '1';
+/* Eine Vorschau-Karte bauen und für den Neuzeichnen-Lauf registrieren.
+   Beide Ansichten (alle Formate / Widget-Vorschau) nutzen dieselbe Karte,
+   damit Aufbau und Beschriftung nur an einer Stelle definiert sind. */
+function itkMakePreviewCard(fmt, overlay, note) {
+  const item = document.createElement('div');
+  item.className = 'itk-preview-item';
+  const c = document.createElement('canvas');
+  c.width = fmt.w; c.height = fmt.h;
+  c.style.width = Math.round(fmt.w * fmt.scale) + 'px';
+  c.style.height = Math.round(fmt.h * fmt.scale) + 'px';
+  const nm = document.createElement('div');
+  nm.className = 'itk-preview-name';
+  nm.textContent = fmt.name;
+  const sz = document.createElement('div');
+  sz.className = 'itk-preview-size';
+  sz.textContent = fmt.w + ' × ' + fmt.h + ' px';
+  item.appendChild(c); item.appendChild(nm); item.appendChild(sz);
+  if (note) {
+    const nt = document.createElement('div');
+    nt.className = 'itk-preview-note';
+    nt.textContent = note;
+    item.appendChild(nt);
+  }
+  itkPreviewCanvases.push({ canvas: c, fmt, overlay });
+  return item;
+}
 
-  ITK_FORMATS.forEach(fmt => {
-    const item = document.createElement('div');
-    item.className = 'itk-preview-item';
-    const c = document.createElement('canvas');
-    c.width = fmt.w; c.height = fmt.h;
-    c.style.width = Math.round(fmt.w * fmt.scale) + 'px';
-    c.style.height = Math.round(fmt.h * fmt.scale) + 'px';
-    const nm = document.createElement('div');
-    nm.className = 'itk-preview-name';
-    nm.textContent = fmt.name;
-    const sz = document.createElement('div');
-    sz.className = 'itk-preview-size';
-    sz.textContent = fmt.w + ' × ' + fmt.h + ' px';
-    item.appendChild(c); item.appendChild(nm); item.appendChild(sz);
-    grid.appendChild(item);
-    itkPreviewCanvases.push({ canvas: c, fmt });
+/* Baut die rechte Spalte neu auf – je nach itkWidget entweder alle 15
+   Formate (Standard) oder nur die Ausspielungen des gewählten Widgets,
+   nach Grid-Größe gruppiert. Wird bei jedem Widget-Wechsel neu ausgeführt,
+   deshalb werden Container und Registrierung zuerst geleert. */
+function itkBuildPreviewGrid() {
+  const gridMain = document.getElementById('itk-preview-grid-main');
+  const gridMore = document.getElementById('itk-preview-grid-more');
+  const viewDefault = document.getElementById('itk-preview-default');
+  const viewWidget = document.getElementById('itk-preview-widget');
+  if (!gridMain || !gridMore || !viewDefault || !viewWidget) return;
+
+  itkPreviewCanvases = [];
+  gridMain.innerHTML = '';
+  gridMore.innerHTML = '';
+  viewWidget.innerHTML = '';
+
+  const widget = ITK_WIDGETS.find(x => x.key === itkWidget);
+  viewDefault.style.display = widget ? 'none' : '';
+  viewWidget.style.display = widget ? '' : 'none';
+
+  if (!widget) {
+    ITK_FORMATS.forEach(fmt => {
+      const card = itkMakePreviewCard(fmt, 'none', null);
+      (fmt.group === 'main' ? gridMain : gridMore).appendChild(card);
+    });
+    return;
+  }
+
+  widget.rows.forEach(row => {
+    const section = document.createElement('div');
+    section.className = 'itk-preview-row';
+    const label = document.createElement('div');
+    label.className = 'itk-preview-group-label';
+    label.textContent = 'Grid ' + row.grid;
+    const grid = document.createElement('div');
+    grid.className = 'itk-preview-grid';
+    row.slots.forEach(slot => {
+      const fmt = itkFormatByName(slot.format);
+      if (!fmt) return;
+      grid.appendChild(itkMakePreviewCard(fmt, slot.overlay, slot.note));
+    });
+    section.appendChild(label);
+    section.appendChild(grid);
+    viewWidget.appendChild(section);
   });
 }
 
@@ -586,6 +1063,27 @@ function itkInitControls() {
     itkHandleIconUpload(e.target.files[0]);
     e.target.value = '';
   });
+
+  const widgetSel = document.getElementById('itk-widget-select');
+  const dangerCb = document.getElementById('itk-danger-toggle');
+  const syncDangerState = () => {
+    // Ohne gewähltes Widget gibt es keine Überlagerungen – der Schalter
+    // hätte dort nichts zu schalten.
+    const off = itkWidget === 'none';
+    dangerCb.disabled = off;
+    document.getElementById('itk-danger-wrap').classList.toggle('disabled', off);
+  };
+  widgetSel.addEventListener('change', () => {
+    itkWidget = widgetSel.value;
+    syncDangerState();
+    itkBuildPreviewGrid();
+    itkRedraw();
+  });
+  dangerCb.addEventListener('change', () => {
+    itkShowDanger = dangerCb.checked;
+    itkRedraw();
+  });
+  syncDangerState();
 
   document.getElementById('itk-download').addEventListener('click', () => {
     const link = document.createElement('a');

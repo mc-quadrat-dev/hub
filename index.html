@@ -720,7 +720,7 @@
       border-bottom: 1px solid rgba(255,255,255,0.14);
     }
 
-    /* Nur auf Mobile sichtbar – springt zu den 25 Format-Vorschauen am Seitenende (siehe Mobile-Media-Query) */
+    /* Nur auf Mobile sichtbar – springt zu den Format-Vorschauen am Seitenende (siehe Mobile-Media-Query) */
     .itk-jump-link {
       display: none; align-items: center; gap: 6px;
       margin-top: 10px; font-size: 12px; color: #cefb0b; text-decoration: none;
@@ -804,6 +804,42 @@
     .itk-preview-name { font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.8); text-align: center; }
     .itk-preview-size { font-size: 10px; color: rgba(255,255,255,0.4); text-align: center; }
 
+    .itk-preview-group-label {
+      font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase;
+      color: rgba(255,255,255,0.55); margin: 0 0 12px;
+    }
+    .itk-preview-main-panel {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.10);
+      padding: 16px 18px 18px;
+      margin-bottom: 26px;
+    }
+    .itk-preview-main-panel .itk-preview-group-label { color: #cefb0b; }
+    .itk-preview-note {
+      font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase;
+      color: #cefb0b; text-align: center;
+    }
+
+    /* Steuerung der Widget-Vorschau – gehört zum Vorschaubereich, nicht zum
+       Designwerkzeug, und sitzt deshalb hier statt in der linken Spalte. */
+    .itk-widget-bar {
+      display: flex; align-items: flex-end; gap: 24px; flex-wrap: wrap;
+      padding-bottom: 18px; margin-bottom: 22px;
+      border-bottom: 1px solid rgba(255,255,255,0.14);
+    }
+    .itk-widget-field { flex: 1 1 240px; max-width: 320px; }
+    .itk-widget-field .dash-side-label { display: block; }
+    .itk-danger-toggle {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 12px; color: rgba(255,255,255,0.8);
+      cursor: pointer; padding-bottom: 8px;
+    }
+    .itk-danger-toggle input { accent-color: #cefb0b; width: 15px; height: 15px; cursor: pointer; }
+    .itk-danger-toggle.disabled { opacity: 0.4; cursor: default; }
+    .itk-danger-toggle.disabled input { cursor: default; }
+    .itk-preview-row { margin-bottom: 26px; }
+    .itk-preview-row:last-child { margin-bottom: 0; }
+
     /* ===================== TOAST ===================== */
     #toast {
       position: fixed; bottom: 32px; left: 50%; transform: translateX(-50%) translateY(12px);
@@ -862,6 +898,9 @@
 
       /* Intranet Kachel: Sprunglink zu den Formaten, Formate untereinander */
       .itk-jump-link { display: inline-flex; }
+      .itk-widget-bar { flex-direction: column; align-items: flex-start; gap: 14px; }
+      /* flex-basis wirkt in der Spaltenrichtung als Höhe – hier zurücksetzen */
+      .itk-widget-field { flex: 0 0 auto; max-width: none; width: 100%; }
       .itk-preview-grid { flex-direction: column; align-items: center; }
       .itk-preview-item { width: 100%; }
       .itk-preview-item canvas { width: 100% !important; height: auto !important; max-width: 420px; }
@@ -1474,7 +1513,38 @@
       <div class="itk-previews" id="itk-formats-heading">
         <div class="itk-preview-eyebrow">Vorschau</div>
         <div class="itk-preview-sub">So erscheint das Motiv in allen Ausspielarten des Intranets – aktualisiert sich live.</div>
-        <div class="itk-preview-grid" id="itk-preview-grid"></div>
+
+        <div class="itk-widget-bar">
+          <div class="itk-widget-field">
+            <label class="dash-side-label" for="itk-widget-select">Widget-Vorschau</label>
+            <select class="dash-input" id="itk-widget-select">
+              <option value="none">Alle Formate (Standard)</option>
+              <option value="smart-feed">Smart Feed</option>
+              <option value="story-banner">Story Banner</option>
+              <option value="top-news">Top News Widget</option>
+              <option value="news-rollup">News Rollup</option>
+              <option value="news-carousel">News Carousel</option>
+              <option value="story-carousel">Story Carousel</option>
+              <option value="story-cards">Personalised Story Cards</option>
+            </select>
+          </div>
+          <label class="itk-danger-toggle" id="itk-danger-wrap">
+            <input type="checkbox" id="itk-danger-toggle" checked>
+            <span>Danger-Zone anzeigen</span>
+          </label>
+        </div>
+
+        <div id="itk-preview-default">
+          <div class="itk-preview-main-panel">
+            <div class="itk-preview-group-label">Main Formate</div>
+            <div class="itk-preview-grid" id="itk-preview-grid-main"></div>
+          </div>
+
+          <div class="itk-preview-group-label">Weitere Formate</div>
+          <div class="itk-preview-grid" id="itk-preview-grid-more"></div>
+        </div>
+
+        <div id="itk-preview-widget" style="display:none;"></div>
       </div>
     </div>
   </div>
