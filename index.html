@@ -840,6 +840,77 @@
     .itk-preview-row { margin-bottom: 26px; }
     .itk-preview-row:last-child { margin-bottom: 0; }
 
+    /* ===================== WILLKOMMENSBILDSCHIRM GENERATOR ===================== */
+    #wsg-view {
+      display: none; position: fixed; inset: 0; z-index: 80; background: #0a0a0a;
+      flex-direction: column; overflow: hidden;
+    }
+    #wsg-view.visible { display: flex; }
+    .wsg-header {
+      flex: 0 0 auto;
+      padding: 16px 24px; display: flex; justify-content: space-between; align-items: center;
+      background: #0a0a0a; border-bottom: 1px solid rgba(255,255,255,0.10);
+    }
+    .wsg-header-left { display: flex; align-items: center; gap: 16px; min-width: 0; }
+    .wsg-header-right { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; }
+    .wsg-title {
+      color: #fff; font-weight: 700; font-size: 18px;
+      font-family: 'Rambla Alt Oscura', 'Inter', sans-serif;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+
+    .wsg-body { flex: 1; display: flex; min-height: 0; }
+    .wsg-editor {
+      flex: 0 0 380px; width: 380px;
+      background: #0a0a0a; border-right: 1px solid rgba(255,255,255,0.10);
+      display: flex; flex-direction: column; min-height: 0;
+    }
+    .wsg-editor-scroll { flex: 1; overflow-y: auto; padding: 20px; min-height: 0; }
+    .wsg-group { margin-bottom: 24px; }
+    .wsg-group:last-child { margin-bottom: 0; }
+    /* Download-Button bleibt beim Scrollen der Bedienelemente sichtbar –
+       randlos bis zur Unterkante der Spalte (Negativ-Margin gleicht das
+       Innenpolster von .wsg-editor-scroll aus), analog zu .itk-sticky-preview. */
+    .wsg-editor-footer {
+      flex: 0 0 auto; position: sticky; bottom: 0; z-index: 5;
+      background: #0a0a0a; padding: 16px 20px;
+      border-top: 1px solid rgba(255,255,255,0.14);
+    }
+
+    .wsg-stage {
+      flex: 1; min-width: 0; overflow: hidden;
+      display: flex; align-items: center; justify-content: center; padding: 24px;
+    }
+    #wsg-wrapper {
+      position: relative;
+      width: 100%; max-width: calc((100vh - 200px) * 16 / 9);
+      aspect-ratio: 16 / 9;
+      background: #000; border: 1px solid rgba(255,255,255,0.12);
+    }
+    #wsg-canvas { display: block; width: 100%; height: 100%; }
+    .wsg-drop-hint {
+      position: absolute; inset: 0; display: flex; flex-direction: column; gap: 8px;
+      align-items: center; justify-content: center; text-align: center;
+      color: rgba(255,255,255,0.4); pointer-events: none; transition: opacity 0.15s;
+    }
+    .wsg-drop-hint.hidden { opacity: 0; }
+    .wsg-drop-hint svg { width: 28px; height: 28px; opacity: 0.5; }
+    .wsg-drop-hint p { font-size: 12px; }
+    #wsg-wrapper.dragover { border-color: #cefb0b; }
+
+    .wsg-btn-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+    .wsg-btn-row .ctrl-btn { flex: 1 1 auto; }
+
+    #wsg-name-overlay {
+      display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+      z-index: 200; justify-content: center; align-items: center;
+    }
+    #wsg-name-overlay.visible { display: flex; }
+    #wsg-name-modal {
+      background: #111111; border: 1px solid rgba(255,255,255,0.18); border-radius: 0;
+      padding: 28px 32px; width: min(360px, calc(100vw - 32px)); color: rgba(255,255,255,0.85);
+    }
+
     /* ===================== TOAST ===================== */
     #toast {
       position: fixed; bottom: 32px; left: 50%; transform: translateX(-50%) translateY(12px);
@@ -862,13 +933,13 @@
       .section-back .btn-label { display: none; }
 
       /* Generator-Kopfzeilen: Text ausblenden, umbrechen als Sicherheitsnetz, Titel kürzen */
-      .dash-header, .anim-header, .itk-header, .editor-header {
+      .dash-header, .anim-header, .itk-header, .editor-header, .wsg-header {
         flex-wrap: wrap; row-gap: 8px; padding: 12px 16px;
       }
-      .dash-header .btn-label, .anim-header .btn-label, .itk-header .btn-label, .editor-header .btn-label {
+      .dash-header .btn-label, .anim-header .btn-label, .itk-header .btn-label, .editor-header .btn-label, .wsg-header .btn-label {
         display: none;
       }
-      .dash-title, .anim-title, .itk-title, .editor-title {
+      .dash-title, .anim-title, .itk-title, .editor-title, .wsg-title {
         min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
       }
 
@@ -877,13 +948,14 @@
       .teams-card { width: 100%; max-width: 420px; }
 
       /* Dashboard / Animation / Intranet Kachel: Vorschau oben (sticky), Konfiguratoren darunter */
-      .dash-body, .anim-body, .itk-body {
+      .dash-body, .anim-body, .itk-body, .wsg-body {
         flex-direction: column; overflow-y: auto; -webkit-overflow-scrolling: touch;
       }
-      .dash-stage, .anim-stage {
+      .dash-stage, .anim-stage, .wsg-stage {
         position: sticky; top: 0; z-index: 5; flex: 0 0 auto;
         width: 100%; max-height: 40vh; padding: 12px; background: #000;
       }
+      .wsg-editor { width: 100%; flex: 0 0 auto; overflow: visible; }
       #dash-wrapper { max-width: 100%; max-height: 100%; }
       .dash-sidebar-outer, .anim-sidebar {
         width: 100%; flex: 0 0 auto;
@@ -1147,6 +1219,15 @@
             </div>
             <div class="hub-tile-title">Intranet Kachel</div>
             <div class="hub-tile-desc">Bildkacheln für alle Intranet-Formate</div>
+          </div>
+
+          <!-- Tile: Willkommensbildschirm -->
+          <div class="hub-tile" id="tile-welcome">
+            <div class="hub-tile-icon">
+              <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="14" rx="1"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+            </div>
+            <div class="hub-tile-title">Willkommensbildschirm</div>
+            <div class="hub-tile-desc">Kundenlogo für den Frame TV im Büro</div>
           </div>
 
         </div>
@@ -1549,13 +1630,108 @@
     </div>
   </div>
 
+  <!-- ===== WILLKOMMENSBILDSCHIRM GENERATOR ===== -->
+  <div id="wsg-view">
+    <div class="wsg-header">
+      <div class="wsg-header-left">
+        <button class="section-back" id="wsg-back">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+          <span class="btn-label">Zurück</span>
+        </button>
+        <div class="wsg-title">Willkommensbildschirm</div>
+      </div>
+      <div class="wsg-header-right">
+        <button class="ctrl-btn" id="wsg-reset" title="Zurücksetzen" style="display:flex; align-items:center; gap:6px;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></svg>
+          <span class="btn-label">Zurücksetzen</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="wsg-body">
+      <div class="wsg-editor">
+
+        <div class="wsg-editor-scroll">
+          <div class="wsg-group">
+            <div class="dash-side-label">Kundenlogo</div>
+            <div class="filter-group" id="wsg-mode-group">
+              <button class="filter-chip active" data-mode="logo">Logo</button>
+              <button class="filter-chip" data-mode="text">Name als Text</button>
+            </div>
+          </div>
+
+          <div class="wsg-group" id="wsg-logo-group">
+            <div class="wsg-btn-row">
+              <button class="ctrl-btn" id="wsg-upload-btn">SVG auswählen</button>
+              <button class="ctrl-btn" id="wsg-remove-btn">Entfernen</button>
+            </div>
+            <input type="file" id="wsg-file-input" accept=".svg,image/svg+xml" style="display:none">
+          </div>
+
+          <div class="wsg-group" id="wsg-text-group" style="display:none;">
+            <div class="dash-side-label">Kundenname</div>
+            <input type="text" class="dash-input" id="wsg-name-input" placeholder="z. B. Futurestories Foundation" maxlength="60">
+          </div>
+
+          <div class="wsg-group">
+            <div class="dash-side-label">Export-Auflösung</div>
+            <div class="filter-group" id="wsg-res-group">
+              <button class="filter-chip active" data-w="1920" data-h="1080">Full HD (1920 × 1080)</button>
+              <button class="filter-chip" data-w="3840" data-h="2160">4K (3840 × 2160)</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="wsg-editor-footer">
+          <button class="ctrl-btn primary" id="wsg-download" title="JPG herunterladen" style="display:flex; align-items:center; justify-content:center; gap:6px; width:100%;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+            <span class="btn-label">JPG herunterladen</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="wsg-stage">
+        <div id="wsg-wrapper">
+          <canvas id="wsg-canvas" width="1920" height="1080"></canvas>
+          <div class="wsg-drop-hint" id="wsg-drop-hint">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+            <p>Logo hier ablegen</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== WILLKOMMENSBILDSCHIRM: KUNDENNAME-ABFRAGE FÜR DEN DATEINAMEN ===== -->
+  <div id="wsg-name-overlay">
+    <div id="wsg-name-modal">
+      <h2 style="margin-bottom:16px;">Kundenname für den Export</h2>
+      <div style="margin-bottom:20px;">
+        <label style="font-size:12px; color:#aaa; display:block; margin-bottom:8px;">Wird im Dateinamen verwendet</label>
+        <input type="text" class="modal-input" id="wsg-export-name-input" placeholder="z. B. Futurestories Foundation" maxlength="60">
+      </div>
+      <div class="modal-actions">
+        <button class="ctrl-btn" id="wsg-name-cancel">Abbrechen</button>
+        <button class="ctrl-btn primary" id="wsg-name-confirm">Herunterladen</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ===== TOAST ===== -->
   <div id="toast">Hex-Wert kopiert!</div>
 
-  <script src="app.js"></script>
-  <script src="dashboard.js"></script>
-  <script src="pattern-engine.js"></script>
-  <script src="pattern.js"></script>
-  <script src="intranet.js"></script>
+  <!-- Versions-Parameter gegen Cache-Mischmasch: GitHub Pages liefert HTML und
+       JS je 10 Minuten aus dem Cache (cache-control: max-age=600). Ohne den
+       Parameter kann der Browser eine neue index.html mit altem JS (oder
+       umgekehrt) kombinieren – dann greifen die Skripte auf Elemente zu, die
+       es in der jeweils anderen Version noch nicht bzw. nicht mehr gibt, und
+       ganze Bereiche bleiben leer. Bei jedem Deploy mit Code-Änderung hier
+       das Datum hochzählen, dann laden HTML und JS garantiert zusammen. -->
+  <script src="app.js?v=20260826"></script>
+  <script src="dashboard.js?v=20260826"></script>
+  <script src="pattern-engine.js?v=20260826"></script>
+  <script src="pattern.js?v=20260826"></script>
+  <script src="intranet.js?v=20260826"></script>
+  <script src="welcome.js?v=20260826"></script>
 </body>
 </html>
