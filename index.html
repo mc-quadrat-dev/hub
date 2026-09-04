@@ -911,6 +911,18 @@
       padding: 28px 32px; width: min(360px, calc(100vw - 32px)); color: rgba(255,255,255,0.85);
     }
 
+    #wsg-fetch-overlay {
+      display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+      z-index: 200; justify-content: center; align-items: center; padding: 20px;
+    }
+    #wsg-fetch-overlay.visible { display: flex; }
+    #wsg-fetch-modal {
+      background: #111111; border: 1px solid rgba(255,255,255,0.18); border-radius: 0;
+      padding: 28px 32px; width: min(480px, calc(100vw - 32px)); color: rgba(255,255,255,0.85);
+      max-height: calc(100vh - 40px); overflow-y: auto;
+    }
+    #wsg-fetch-modal textarea.modal-input { width: 100%; }
+
     /* ===================== TOAST ===================== */
     #toast {
       position: fixed; bottom: 32px; left: 50%; transform: translateX(-50%) translateY(12px);
@@ -1662,10 +1674,11 @@
 
           <div class="wsg-group" id="wsg-logo-group">
             <div class="wsg-btn-row">
-              <button class="ctrl-btn" id="wsg-upload-btn">SVG auswählen</button>
+              <button class="ctrl-btn" id="wsg-upload-btn">Logo auswählen</button>
+              <button class="ctrl-btn" id="wsg-fetch-btn">Logo suchen</button>
               <button class="ctrl-btn" id="wsg-remove-btn">Entfernen</button>
             </div>
-            <input type="file" id="wsg-file-input" accept=".svg,image/svg+xml" style="display:none">
+            <input type="file" id="wsg-file-input" accept=".svg,image/svg+xml,.png,image/png" style="display:none">
           </div>
 
           <div class="wsg-group" id="wsg-text-group" style="display:none;">
@@ -1713,6 +1726,44 @@
       <div class="modal-actions">
         <button class="ctrl-btn" id="wsg-name-cancel">Abbrechen</button>
         <button class="ctrl-btn primary" id="wsg-name-confirm">Herunterladen</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== WILLKOMMENSBILDSCHIRM: LOGO-FETCHER (SVG bevorzugt, PNG als Fallback) ===== -->
+  <div id="wsg-fetch-overlay">
+    <div id="wsg-fetch-modal">
+      <h2 style="margin-bottom:6px;">Logo suchen</h2>
+      <p style="font-size:12px; color:#aaa; margin-bottom:20px;">
+        Volle Webseiten lassen sich aus Sicherheitsgründen (CORS) fast nie direkt abrufen –
+        ein direkter Link auf eine .svg- oder .png-Datei klappt meist. SVG wird bevorzugt
+        (bleibt in jeder Größe scharf); PNG wird automatisch weiß eingefärbt, kann aber bei
+        niedriger Auflösung unscharf werden. Bei einer normalen Seiten-URL deshalb notfalls
+        den Seitenquelltext unten einfügen.
+      </p>
+
+      <div style="margin-bottom:20px;">
+        <label style="font-size:12px; color:#aaa; display:block; margin-bottom:8px;">Per URL</label>
+        <div class="modal-row" style="margin-bottom:0;">
+          <input type="text" class="modal-input" id="wsg-fetch-url-input" placeholder="https://kunde.de/logo.svg">
+          <button class="ctrl-btn primary" id="wsg-fetch-url-btn" style="flex:0 0 auto;">Abrufen</button>
+        </div>
+      </div>
+
+      <div style="display:flex; align-items:center; gap:10px; margin:18px 0; color:#666; font-size:11px; text-transform:uppercase; letter-spacing:0.08em;">
+        <div style="flex:1; height:1px; background:rgba(255,255,255,0.12);"></div>
+        oder
+        <div style="flex:1; height:1px; background:rgba(255,255,255,0.12);"></div>
+      </div>
+
+      <div style="margin-bottom:20px;">
+        <label style="font-size:12px; color:#aaa; display:block; margin-bottom:8px;">Seitenquelltext einfügen (Rechtsklick auf der Kundenseite → „Seitenquelltext anzeigen" → alles kopieren)</label>
+        <textarea class="modal-input" id="wsg-fetch-paste-input" rows="5" style="resize:vertical; font-family:monospace; font-size:11px;"></textarea>
+      </div>
+
+      <div class="modal-actions">
+        <button class="ctrl-btn" id="wsg-fetch-cancel">Abbrechen</button>
+        <button class="ctrl-btn primary" id="wsg-fetch-paste-btn">Verwenden</button>
       </div>
     </div>
   </div>
