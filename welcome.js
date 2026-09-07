@@ -45,7 +45,7 @@ const WSG_MC_LOGO = { margin: 0.072, h: 0.032 };
 let wsgMode = 'logo';            // 'logo' | 'text'
 let wsgLogo = null;              // { img, vbW, vbH } – sanitiertes, weißes Logo
 let wsgName = '';
-let wsgExportW = 1920, wsgExportH = 1080;
+let wsgExportW = 3840, wsgExportH = 2160;
 let wsgExportName = '';          // Kundenname für den Dateinamen (unabhängig von wsgName im Text-Modus)
 let wsgMcLogoImg = null;
 let wsgFontsReady = false;
@@ -301,6 +301,56 @@ function wsgResolveInlineSvg(svgEl, doc, baseUrl) {
   return { type: 'inline', format: 'svg', svg: svgEl.outerHTML };
 }
 
+/* Erkennt einen Sprite-Container: ein <svg>, dessen einzige Kinder <defs>/
+   <symbol>-Definitionen sind (kein direkt sichtbarer Inhalt, erst eine
+   <use>-Referenz an anderer Stelle macht daraus ein Icon). Ohne diesen Filter
+   würde der ganze – oft unsichtbare – Sprite-Container selbst als (leerer)
+   Kandidat im Auswahl-Raster auftauchen. */
+function wsgIsSpriteContainer(svgEl) {
+  const kids = [...svgEl.children];
+  if (!kids.length) return false;
+  return kids.every(c => ['defs', 'symbol', 'title', 'desc', 'metadata'].includes(c.tagName.toLowerCase()));
+}
+
+/* .className ist bei SVG-Elementen ein SVGAnimatedString, kein String – für
+   den Logo/Brand-Hinweis-Check deshalb immer über das class-Attribut gehen,
+   das funktioniert für HTML- wie SVG-Elemente gleichermaßen. */
+function wsgIsLikelyLogoEl(el) {
+  let node = el;
+  for (let i = 0; i < 4 && node && node.nodeType === 1; i++) {
+    const label = (node.id || '') + ' ' + (node.getAttribute('class') || '') + ' ' + (node.getAttribute('aria-label') || '');
+    if (WSG_LOGO_HINT_RE.test(label)) return true;
+    node = node.parentElement;
+  }
+  return false;
+}
+
+/* Sammelt ALLE Inline-SVGs im Dokument (statt wie wsgFindLogoInHtml nur des
+   einen wahrscheinlichsten Treffers) – Basis für das Auswahl-Raster, wenn die
+   Heuristik allein nicht zuverlässig genug ist (Icon-Sprite-Systeme, mehrere
+   Logo-ähnliche SVGs). Kein Netzwerk-Fetch: <use>-Referenzen auf externe
+   Dateien werden übersprungen, nicht nachgeladen. */
+function wsgCollectInlineSvgCandidates(doc, baseUrl) {
+  const seen = new Set();
+  const results = [];
+  doc.querySelectorAll('svg').forEach(svgEl => {
+    if (wsgIsSpriteContainer(svgEl)) return;
+    const resolved = wsgResolveInlineSvg(svgEl, doc, baseUrl);
+    if (!resolved || resolved.type !== 'inline') return;
+    const clean = wsgSanitizeLogoSVG(resolved.svg);
+    if (!clean || seen.has(clean.svg)) return;
+    seen.add(clean.svg);
+    const inHeaderNav = !!svgEl.closest('header, nav');
+    const isLikelyLogo = wsgIsLikelyLogoEl(svgEl);
+    results.push({
+      svg: clean.svg, vbW: clean.vbW, vbH: clean.vbH,
+      isLikelyLogo, priority: isLikelyLogo ? 2 : (inHeaderNav ? 1 : 0)
+    });
+  });
+  results.sort((a, b) => b.priority - a.priority);
+  return results.slice(0, 24);
+}
+
 /* Liefert { format, data } – data ist SVG-Text oder eine PNG-Data-URI. Externe
    Dateien werden immer zuerst als Data-URI geladen (nie direkt als img.src),
    damit die anschließende Canvas-Weiterverarbeitung (Sanitizer bzw.
@@ -365,8 +415,17 @@ async function wsgFetchAndApplyUrl(url) {
       // Keine erkennbare Bilddatei – als HTML-Seite parsen und darin suchen.
       const text = await res.text();
       const doc = new DOMParser().parseFromString(text, 'text/html');
-      const candidate = wsgFindLogoInHtml(doc, url);
-      resolved = await wsgResolveCandidate(candidate);
+      const inlineCandidates = wsgCollectInlineSvgCandidates(doc, url);
+      if (inlineCandidates.length > 1) {
+        wsgOpenLogoPicker(inlineCandidates);
+        return;
+      }
+      if (inlineCandidates.length === 1) {
+        resolved = { format: 'svg', data: inlineCandidates[0].svg };
+      } else {
+        const candidate = wsgFindLogoInHtml(doc, url);
+        resolved = await wsgResolveCandidate(candidate);
+      }
     }
 
     if (!resolved) {
@@ -394,12 +453,21 @@ async function wsgApplyPastedHtml(htmlText) {
     resolved = { format: 'svg', data: htmlText };
   } else {
     const doc = new DOMParser().parseFromString(htmlText, 'text/html');
-    const candidate = wsgFindLogoInHtml(doc, 'https://example.com/');
-    if (candidate && candidate.type === 'inline') {
-      resolved = { format: candidate.format, data: candidate.svg };
-    } else if (candidate && candidate.type === 'external') {
-      resolved = await wsgResolveCandidate(candidate);
-      if (!resolved) { showToast('Logo-Datei gefunden, aber nicht ladbar: ' + candidate.url); return; }
+    const inlineCandidates = wsgCollectInlineSvgCandidates(doc, 'https://example.com/');
+    if (inlineCandidates.length > 1) {
+      wsgOpenLogoPicker(inlineCandidates);
+      return;
+    }
+    if (inlineCandidates.length === 1) {
+      resolved = { format: 'svg', data: inlineCandidates[0].svg };
+    } else {
+      const candidate = wsgFindLogoInHtml(doc, 'https://example.com/');
+      if (candidate && candidate.type === 'inline') {
+        resolved = { format: candidate.format, data: candidate.svg };
+      } else if (candidate && candidate.type === 'external') {
+        resolved = await wsgResolveCandidate(candidate);
+        if (!resolved) { showToast('Logo-Datei gefunden, aber nicht ladbar: ' + candidate.url); return; }
+      }
     }
   }
 
@@ -490,6 +558,48 @@ function wsgCloseFetchModal() {
   document.getElementById('wsg-fetch-overlay').classList.remove('visible');
 }
 
+function wsgOpenUsbGuide() {
+  document.getElementById('wsg-usb-overlay').classList.add('visible');
+}
+
+function wsgCloseUsbGuide() {
+  document.getElementById('wsg-usb-overlay').classList.remove('visible');
+}
+
+// Auswahl-Raster: erscheint nur, wenn mehrere Inline-SVGs auf der Seite
+// gefunden wurden und die Heuristik allein nicht zuverlässig genug entscheiden
+// kann. Liegt über dem Fetch-Modal (das im Hintergrund offen bleibt), damit
+// "Abbrechen" hier nur den Picker schließt, nicht den ganzen Fetch-Vorgang.
+function wsgOpenLogoPicker(candidates) {
+  const grid = document.getElementById('wsg-logo-pick-grid');
+  grid.innerHTML = '';
+  candidates.forEach((c, i) => {
+    const tile = document.createElement('div');
+    tile.className = 'itk-swatch wsg-logo-pick';
+    const img = document.createElement('img');
+    img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(c.svg);
+    img.alt = 'SVG-Kandidat ' + (i + 1);
+    tile.appendChild(img);
+    if (c.isLikelyLogo) {
+      const label = document.createElement('div');
+      label.className = 'itk-swatch-label';
+      label.textContent = 'Logo?';
+      tile.appendChild(label);
+    }
+    tile.addEventListener('click', () => {
+      wsgApplyLogoSvgText(c.svg, 'Logo ausgewählt');
+      wsgCloseLogoPicker();
+      wsgCloseFetchModal();
+    });
+    grid.appendChild(tile);
+  });
+  document.getElementById('wsg-logo-pick-overlay').classList.add('visible');
+}
+
+function wsgCloseLogoPicker() {
+  document.getElementById('wsg-logo-pick-overlay').classList.remove('visible');
+}
+
 // ---------------------------------------------------------------------
 // 5. STEUERUNG
 // ---------------------------------------------------------------------
@@ -560,8 +670,8 @@ function wsgInitControls() {
     wsgName = '';
     wsgExportName = '';
     document.getElementById('wsg-name-input').value = '';
-    wsgExportW = WSG_W; wsgExportH = WSG_H;
-    document.querySelectorAll('#wsg-res-group .filter-chip').forEach((c, i) => c.classList.toggle('active', i === 0));
+    wsgExportW = 3840; wsgExportH = 2160;
+    document.querySelectorAll('#wsg-res-group .filter-chip').forEach((c, i) => c.classList.toggle('active', i === 1));
     wsgSelectMode('logo');
     showToast('Zurückgesetzt');
   });
@@ -577,6 +687,14 @@ function wsgInitControls() {
     else if (e.key === 'Escape') wsgCloseNamePrompt();
   });
   nameOverlay.addEventListener('click', e => { if (e.target === nameOverlay) wsgCloseNamePrompt(); });
+
+  const usbOverlay = document.getElementById('wsg-usb-overlay');
+  document.getElementById('wsg-usb-confirm').addEventListener('click', wsgCloseUsbGuide);
+  usbOverlay.addEventListener('click', e => { if (e.target === usbOverlay) wsgCloseUsbGuide(); });
+
+  const logoPickOverlay = document.getElementById('wsg-logo-pick-overlay');
+  document.getElementById('wsg-logo-pick-cancel').addEventListener('click', wsgCloseLogoPicker);
+  logoPickOverlay.addEventListener('click', e => { if (e.target === logoPickOverlay) wsgCloseLogoPicker(); });
 }
 
 // Kundenname wird nur für den Dateinamen abgefragt (unabhängig vom Motiv
@@ -623,6 +741,7 @@ function wsgExport() {
       link.download = `${wsgTodayStamp()}_mc_Frame_Screensaver_${kunde}_${canvas.width}x${canvas.height}.jpg`;
       link.href = canvas.toDataURL('image/jpeg', 0.95);
       link.click();
+      wsgOpenUsbGuide();
     };
     if (wsgExportW === WSG_W && wsgExportH === WSG_H) {
       finish(wsgCanvas);

@@ -923,6 +923,33 @@
     }
     #wsg-fetch-modal textarea.modal-input { width: 100%; }
 
+    #wsg-logo-pick-overlay {
+      display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.72);
+      z-index: 210; justify-content: center; align-items: center; padding: 20px;
+    }
+    #wsg-logo-pick-overlay.visible { display: flex; }
+    #wsg-logo-pick-modal {
+      background: #111111; border: 1px solid rgba(255,255,255,0.18); border-radius: 0;
+      padding: 28px 32px; width: min(560px, calc(100vw - 32px)); color: rgba(255,255,255,0.85);
+      max-height: calc(100vh - 40px); overflow-y: auto;
+    }
+    .wsg-logo-pick.itk-swatch-grid { grid-template-columns: repeat(6, 1fr); }
+    .wsg-logo-pick .itk-swatch img { object-fit: contain; padding: 12px; }
+    @media (max-width: 760px) {
+      .wsg-logo-pick.itk-swatch-grid { grid-template-columns: repeat(3, 1fr); }
+    }
+
+    #wsg-usb-overlay {
+      display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+      z-index: 200; justify-content: center; align-items: center; padding: 20px;
+    }
+    #wsg-usb-overlay.visible { display: flex; }
+    #wsg-usb-modal {
+      background: #111111; border: 1px solid rgba(255,255,255,0.18); border-radius: 0;
+      padding: 28px 32px; width: min(420px, calc(100vw - 32px)); color: rgba(255,255,255,0.85);
+      max-height: calc(100vh - 40px); overflow-y: auto;
+    }
+
     /* ===================== TOAST ===================== */
     #toast {
       position: fixed; bottom: 32px; left: 50%; transform: translateX(-50%) translateY(12px);
@@ -1689,8 +1716,8 @@
           <div class="wsg-group">
             <div class="dash-side-label">Export-Auflösung</div>
             <div class="filter-group" id="wsg-res-group">
-              <button class="filter-chip active" data-w="1920" data-h="1080">Full HD (1920 × 1080)</button>
-              <button class="filter-chip" data-w="3840" data-h="2160">4K (3840 × 2160)</button>
+              <button class="filter-chip" data-w="1920" data-h="1080">Full HD (1920 × 1080)</button>
+              <button class="filter-chip active" data-w="3840" data-h="2160">4K (3840 × 2160)</button>
             </div>
           </div>
         </div>
@@ -1768,6 +1795,40 @@
     </div>
   </div>
 
+  <!-- ===== WILLKOMMENSBILDSCHIRM: SVG-AUSWAHL BEI MEHREREN TREFFERN ===== -->
+  <div id="wsg-logo-pick-overlay">
+    <div id="wsg-logo-pick-modal">
+      <h2 style="margin-bottom:6px;">Welches ist das Logo?</h2>
+      <p style="font-size:12px; color:#aaa; margin-bottom:16px;">
+        Mehrere SVGs auf der Seite gefunden – bitte das richtige Logo auswählen.
+      </p>
+      <div class="itk-swatch-grid wsg-logo-pick" id="wsg-logo-pick-grid"></div>
+      <div class="modal-actions" style="margin-top:20px;">
+        <button class="ctrl-btn" id="wsg-logo-pick-cancel">Abbrechen</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== WILLKOMMENSBILDSCHIRM: USB-ANLEITUNG NACH DEM DOWNLOAD ===== -->
+  <div id="wsg-usb-overlay">
+    <div id="wsg-usb-modal">
+      <h2 style="margin-bottom:16px;">So kommt das Bild auf den Frame</h2>
+      <ul style="font-size:13px; color:#ccc; line-height:1.6; margin:0 0 20px 0; padding-left:20px;">
+        <li>Den USB-Stick, der bereits im Frame steckt, entnehmen</li>
+        <li>Am Rechner anschließen und die heruntergeladene Datei draufkopieren</li>
+        <li>Stick zurück in den USB-Anschluss der One-Connect-Box / des Frame TV stecken</li>
+        <li>Fernseher in den Art Mode versetzen (falls nicht schon aktiv)</li>
+        <li>Mit der Fernbedienung ins Menü → „Meine Sammlung" wechseln</li>
+        <li>Den USB-Stick als Quelle auswählen und das Bild anhaken</li>
+        <li>Mit „Speichern" in die Sammlung des Frame übernehmen</li>
+        <li>Das gespeicherte Bild in der Sammlung antippen, um es als aktuellen Hintergrund auszuwählen</li>
+      </ul>
+      <div class="modal-actions">
+        <button class="ctrl-btn primary" id="wsg-usb-confirm">Verstanden</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ===== TOAST ===== -->
   <div id="toast">Hex-Wert kopiert!</div>
 
@@ -1778,11 +1839,11 @@
        es in der jeweils anderen Version noch nicht bzw. nicht mehr gibt, und
        ganze Bereiche bleiben leer. Bei jedem Deploy mit Code-Änderung hier
        das Datum hochzählen, dann laden HTML und JS garantiert zusammen. -->
-  <script src="app.js?v=20260826"></script>
-  <script src="dashboard.js?v=20260826"></script>
-  <script src="pattern-engine.js?v=20260826"></script>
-  <script src="pattern.js?v=20260826"></script>
-  <script src="intranet.js?v=20260826"></script>
-  <script src="welcome.js?v=20260826"></script>
+  <script src="app.js?v=20260907"></script>
+  <script src="dashboard.js?v=20260907"></script>
+  <script src="pattern-engine.js?v=20260907"></script>
+  <script src="pattern.js?v=20260907"></script>
+  <script src="intranet.js?v=20260907"></script>
+  <script src="welcome.js?v=20260907"></script>
 </body>
 </html>
