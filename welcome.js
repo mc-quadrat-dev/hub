@@ -721,8 +721,20 @@ function wsgConfirmNamePrompt() {
   wsgExport();
 }
 
+/* Umlaute werden umschrieben statt gelöscht – sonst würde aus "Müller" ein
+   "Mller". Die deutschen Sonderfälle müssen vor dem Entfernen der Akzente
+   laufen, weil ü sonst zu u statt zu ue würde. */
 function wsgFilenamePart(str) {
-  return str.trim().replace(/\s+/g, '_').replace(/[^A-Za-z0-9_-]/g, '');
+  return String(str == null ? '' : str)
+    .replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue')
+    .replace(/Ä/g, 'Ae').replace(/Ö/g, 'Oe').replace(/Ü/g, 'Ue')
+    .replace(/ß/g, 'ss')
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .trim()
+    .replace(/\s+/g, '_')
+    .replace(/[^A-Za-z0-9_-]/g, '')
+    .replace(/_+/g, '_')
+    .replace(/^_|_$/g, '');
 }
 
 function wsgTodayStamp() {

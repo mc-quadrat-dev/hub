@@ -950,6 +950,113 @@
       max-height: calc(100vh - 40px); overflow-y: auto;
     }
 
+    /* ===================== KPI-VIDEO-GENERATOR ===================== */
+    #kpi-view {
+      display: none; position: fixed; inset: 0; z-index: 80; background: #0a0a0a;
+      flex-direction: column; overflow: hidden;
+    }
+    #kpi-view.visible { display: flex; }
+
+    .kpi-header {
+      flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between;
+      gap: 16px; padding: 16px 24px;
+      background: #0a0a0a; border-bottom: 1px solid rgba(255,255,255,0.10);
+    }
+    .kpi-header-left { display: flex; align-items: center; gap: 16px; min-width: 0; }
+    .kpi-header-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+    .kpi-title { font-family: 'Rambla Alt Oscura', 'Inter', sans-serif; font-size: 17px; color: #fff; }
+
+    .kpi-body { flex: 1; display: flex; min-height: 0; }
+    .kpi-stage {
+      flex: 1; min-width: 0; overflow: hidden;
+      display: flex; align-items: center; justify-content: center; padding: 24px; background: #000;
+    }
+    #kpi-canvas {
+      display: block; width: auto; height: auto;
+      max-width: 100%; max-height: calc(100vh - 190px);
+      border: 1px solid rgba(255,255,255,0.12);
+    }
+
+    .kpi-sidebar-outer {
+      flex: 0 0 340px; width: 340px;
+      background: #0a0a0a; border-left: 1px solid rgba(255,255,255,0.10);
+      display: flex; flex-direction: column; min-height: 0;
+    }
+    .kpi-sidebar { flex: 1; overflow-y: auto; padding: 20px; }
+
+    .kpi-add-btn { width: 100%; margin-top: 8px; }
+    .kpi-file-hint {
+      font-size: 11px; line-height: 1.5; color: rgba(255,255,255,0.4);
+      margin-top: 7px; word-break: break-all;
+    }
+
+    /* Export-Fortschritt: läuft als Lime-Balken über das Bezeichnungsfeld */
+    .kpi-progress-host { position: relative; }
+    .kpi-progress {
+      position: absolute; left: 0; top: 0; bottom: 0; width: 0;
+      background: rgba(206,251,11,0.30);
+      box-shadow: 0 0 10px rgba(206,251,11,0.5);
+      border-right: 2px solid #cefb0b;
+      pointer-events: none; opacity: 0;
+      transition: width 0.12s linear, opacity 0.35s;
+    }
+    .kpi-progress.active { opacity: 1; }
+
+    .kpi-acc { border-top: 1px solid rgba(255,255,255,0.10); }
+    .kpi-acc:last-of-type { border-bottom: 1px solid rgba(255,255,255,0.10); }
+    .kpi-acc-head {
+      width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 8px;
+      padding: 13px 0; background: none; border: 0; cursor: pointer; font-family: inherit;
+      font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase;
+      color: rgba(255,255,255,0.55); transition: color 0.15s;
+    }
+    .kpi-acc-head:hover { color: rgba(255,255,255,0.85); }
+    .kpi-acc.open .kpi-acc-head { color: #fff; }
+    .kpi-acc-sign { font-size: 14px; color: rgba(255,255,255,0.4); }
+    .kpi-acc-body { padding: 2px 0 18px; }
+
+    .kpi-footer {
+      flex: 0 0 auto; padding: 10px 24px; min-height: 38px;
+      background: #0a0a0a; border-top: 1px solid rgba(255,255,255,0.10);
+      font-size: 12px; color: rgba(255,255,255,0.6);
+      display: flex; align-items: center;
+    }
+
+    .kpi-ctrl { margin-bottom: 14px; }
+    .kpi-ctrl-row {
+      display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 6px;
+    }
+    .kpi-ctrl-row label { font-size: 12px; color: rgba(255,255,255,0.7); }
+    .kpi-val { font-size: 11px; color: #cefb0b; }
+    .kpi-ctrl input[type=range] { width: 100%; }
+    .kpi-ctrl.disabled { opacity: 0.4; pointer-events: none; }
+
+    .kpi-item {
+      display: flex; align-items: center; gap: 8px; padding: 9px 10px; margin-bottom: 6px;
+      background: #111111; border: 1px solid rgba(255,255,255,0.12); cursor: pointer;
+      transition: border-color 0.15s;
+    }
+    .kpi-item:hover { border-color: rgba(255,255,255,0.3); }
+    .kpi-item.active { border-color: #cefb0b; }
+    .kpi-item-title {
+      flex: 1; min-width: 0; font-size: 12px; color: rgba(255,255,255,0.85);
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .kpi-item-acts { display: flex; gap: 4px; flex: 0 0 auto; }
+    .kpi-item-acts .icon-btn { padding: 3px 6px; font-size: 12px; line-height: 1; min-width: 0; }
+
+    .kpi-exp-btn:disabled { opacity: 0.35; pointer-events: none; }
+
+    #kpi-gif-overlay {
+      display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+      z-index: 200; justify-content: center; align-items: center; padding: 20px;
+    }
+    #kpi-gif-overlay.visible { display: flex; }
+    #kpi-gif-modal {
+      background: #111111; border: 1px solid rgba(255,255,255,0.18); border-radius: 0;
+      padding: 28px 32px; width: min(420px, calc(100vw - 32px)); color: rgba(255,255,255,0.85);
+    }
+
     /* ===================== TOAST ===================== */
     #toast {
       position: fixed; bottom: 32px; left: 50%; transform: translateX(-50%) translateY(12px);
@@ -972,13 +1079,13 @@
       .section-back .btn-label { display: none; }
 
       /* Generator-Kopfzeilen: Text ausblenden, umbrechen als Sicherheitsnetz, Titel kürzen */
-      .dash-header, .anim-header, .itk-header, .editor-header, .wsg-header {
+      .dash-header, .anim-header, .itk-header, .editor-header, .wsg-header, .kpi-header {
         flex-wrap: wrap; row-gap: 8px; padding: 12px 16px;
       }
-      .dash-header .btn-label, .anim-header .btn-label, .itk-header .btn-label, .editor-header .btn-label, .wsg-header .btn-label {
+      .dash-header .btn-label, .anim-header .btn-label, .itk-header .btn-label, .editor-header .btn-label, .wsg-header .btn-label, .kpi-header .btn-label {
         display: none;
       }
-      .dash-title, .anim-title, .itk-title, .editor-title, .wsg-title {
+      .dash-title, .anim-title, .itk-title, .editor-title, .wsg-title, .kpi-title {
         min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
       }
 
@@ -987,13 +1094,16 @@
       .teams-card { width: 100%; max-width: 420px; }
 
       /* Dashboard / Animation / Intranet Kachel: Vorschau oben (sticky), Konfiguratoren darunter */
-      .dash-body, .anim-body, .itk-body, .wsg-body {
+      .dash-body, .anim-body, .itk-body, .wsg-body, .kpi-body {
         flex-direction: column; overflow-y: auto; -webkit-overflow-scrolling: touch;
       }
-      .dash-stage, .anim-stage, .wsg-stage {
+      .dash-stage, .anim-stage, .wsg-stage, .kpi-stage {
         position: sticky; top: 0; z-index: 5; flex: 0 0 auto;
         width: 100%; max-height: 40vh; padding: 12px; background: #000;
       }
+      #kpi-canvas { max-height: calc(40vh - 24px); }
+      .kpi-sidebar-outer { width: 100%; flex: 0 0 auto; }
+      .kpi-sidebar { flex: 0 0 auto; overflow: visible; }
       .wsg-editor { width: 100%; flex: 0 0 auto; overflow: visible; }
       #dash-wrapper { max-width: 100%; max-height: 100%; }
       .dash-sidebar-outer, .anim-sidebar {
@@ -1267,6 +1377,15 @@
             </div>
             <div class="hub-tile-title">Willkommensbildschirm</div>
             <div class="hub-tile-desc">Kundenlogo für den Frame TV im Büro</div>
+          </div>
+
+          <!-- Tile: KPI-Video -->
+          <div class="hub-tile" id="tile-kpi">
+            <div class="hub-tile-icon">
+              <svg viewBox="0 0 24 24"><path d="M4 19V5"/><path d="M4 19h16"/><path d="M8 16V11"/><path d="M13 16V7"/><path d="M18 16v-3"/></svg>
+            </div>
+            <div class="hub-tile-title">KPI-Video</div>
+            <div class="hub-tile-desc">Hochzählende Kennzahlen als MP4</div>
           </div>
 
         </div>
@@ -1795,6 +1914,69 @@
     </div>
   </div>
 
+  <!-- ===================== KPI-VIDEO-GENERATOR ===================== -->
+  <div id="kpi-view">
+    <div class="kpi-header">
+      <div class="kpi-header-left">
+        <button class="section-back" id="kpi-back">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+          <span class="btn-label">Zurück</span>
+        </button>
+        <div class="kpi-title">KPI-Video</div>
+      </div>
+      <div class="kpi-header-right">
+        <button class="ctrl-btn" id="kpi-play">Pause</button>
+        <button class="ctrl-btn" id="kpi-replay">Neu abspielen</button>
+        <button class="ctrl-btn" id="kpi-reset">Zurücksetzen</button>
+        <button class="ctrl-btn primary kpi-exp-btn" id="kpi-export-gif" title="GIF herunterladen" style="display:flex; align-items:center; gap:6px;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+          <span class="btn-label">GIF</span>
+        </button>
+        <button class="ctrl-btn primary kpi-exp-btn" id="kpi-export" title="Video herunterladen" style="display:flex; align-items:center; gap:6px;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+          <span class="btn-label">Video</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="kpi-body">
+      <div class="kpi-stage">
+        <canvas id="kpi-canvas" width="1080" height="1080"></canvas>
+      </div>
+      <div class="kpi-sidebar-outer">
+        <aside class="kpi-sidebar" id="kpi-sidebar"></aside>
+      </div>
+    </div>
+
+    <div class="kpi-footer" id="kpi-status"></div>
+  </div>
+
+  <!-- ===== KPI-VIDEO: GIF-EINSTELLUNGEN VOR DEM EXPORT ===== -->
+  <div id="kpi-gif-overlay">
+    <div id="kpi-gif-modal">
+      <h2 style="margin-bottom:6px;">GIF erstellen</h2>
+      <p style="font-size:12px; color:#aaa; margin-bottom:20px; line-height:1.5;" id="kpi-gif-hint"></p>
+      <div class="dash-field" style="margin-bottom:14px;">
+        <label>Bezeichnung (für den Dateinamen)</label>
+        <input type="text" class="dash-input" id="kpi-gif-name" placeholder="z. B. Kundenname" maxlength="60">
+      </div>
+      <div class="dash-row">
+        <div class="dash-field">
+          <label>Bilder pro Sekunde</label>
+          <select class="dash-input" id="kpi-gif-fps"></select>
+        </div>
+        <div class="dash-field">
+          <label>Farben</label>
+          <select class="dash-input" id="kpi-gif-colors"></select>
+        </div>
+      </div>
+      <div class="modal-actions" style="margin-top:22px;">
+        <button class="ctrl-btn" id="kpi-gif-cancel">Abbrechen</button>
+        <button class="ctrl-btn primary" id="kpi-gif-start">GIF erstellen</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ===== WILLKOMMENSBILDSCHIRM: SVG-AUSWAHL BEI MEHREREN TREFFERN ===== -->
   <div id="wsg-logo-pick-overlay">
     <div id="wsg-logo-pick-modal">
@@ -1839,11 +2021,12 @@
        es in der jeweils anderen Version noch nicht bzw. nicht mehr gibt, und
        ganze Bereiche bleiben leer. Bei jedem Deploy mit Code-Änderung hier
        das Datum hochzählen, dann laden HTML und JS garantiert zusammen. -->
-  <script src="app.js?v=20260907"></script>
-  <script src="dashboard.js?v=20260907"></script>
-  <script src="pattern-engine.js?v=20260907"></script>
-  <script src="pattern.js?v=20260907"></script>
-  <script src="intranet.js?v=20260907"></script>
-  <script src="welcome.js?v=20260907"></script>
+  <script src="app.js?v=20260921"></script>
+  <script src="dashboard.js?v=20260921"></script>
+  <script src="pattern-engine.js?v=20260921"></script>
+  <script src="pattern.js?v=20260921"></script>
+  <script src="intranet.js?v=20260921"></script>
+  <script src="welcome.js?v=20260921"></script>
+  <script src="kpi.js?v=20260921"></script>
 </body>
 </html>
