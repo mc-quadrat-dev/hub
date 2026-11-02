@@ -58,13 +58,15 @@ let kpiMounted = false;
 let kpiCanvas = null, kpiCtx = null;
 let kpiRaf = null, kpiT0 = null, kpiPausedAt = null;
 let kpiLogoWhite = null, kpiLogoBlack = null;
+let kpiTitleEls = {};         // Überschrift je KPI in der Liste, wird beim Tippen live nachgeführt
+let kpiFieldEls = {};         // Eingabefelder der ausgewählten KPI
 
 let kpiUid = 1;
 function kpiId() { return 'k' + (kpiUid++) + '_' + Math.floor(Math.random() * 1e6).toString(36); }
 
-/* Der Leerzustand ist bewusst ein fertiges Beispiel (wie im Dashboard-
-   Generator) – so sieht man sofort, wofür das Tool gedacht ist. */
-function kpiDefaultState() {
+const KPI_MAX_ITEMS = 50;
+
+function kpiBaseSettings() {
   return {
     v: 1,
     name: '',
@@ -77,16 +79,57 @@ function kpiDefaultState() {
     loop: true,
     logo: false,
     gifFps: 15,
-    gifColors: 32,
-    items: [
-      { id: kpiId(), prefix: 'bis zu', from: 0, to: 700000, decimals: 0, unit: '',
-        text: 'monatlich erreichte Personen bei Google', variant: 'black' },
-      { id: kpiId(), prefix: 'bis zu', from: 0, to: 50, decimals: 0, unit: '%',
-        text: 'Follower-Wachstum auf Social Media', variant: 'lime' },
-      { id: kpiId(), prefix: 'bis zu', from: 0, to: 5, decimals: 0, unit: 'Plätze',
-        text: 'Verbesserung der durchschnittlichen Google-Position', variant: 'anthracite' }
-    ]
+    gifColors: 32
   };
+}
+
+/* Der Leerzustand ist bewusst ein fertiges Beispiel (wie im Dashboard-
+   Generator) – so sieht man sofort, wofür das Tool gedacht ist. */
+function kpiDefaultState() {
+  return Object.assign(kpiBaseSettings(), {
+    items: [
+      kpiMakeItem({ prefix: 'bis zu', fromText: '0', toText: '700.000', unit: '',
+        text: 'monatlich erreichte Personen bei Google', variant: 'black' }),
+      kpiMakeItem({ prefix: 'bis zu', fromText: '0', toText: '50', unit: '%',
+        text: 'Follower-Wachstum auf Social Media', variant: 'lime' }),
+      kpiMakeItem({ prefix: 'bis zu', fromText: '0', toText: '5', unit: 'Plätze',
+        text: 'Verbesserung der durchschnittlichen Google-Position', variant: 'anthracite' })
+    ]
+  });
+}
+
+/* Eine Datei oder ein gespeicherter Stand ist fremde Eingabe: nichts wird
+   ungeprüft übernommen. Unbekannte Felder fallen weg, Zahlen werden auf
+   sinnvolle Bereiche gezogen, Texte gekürzt, und die Zahl der KPIs ist
+   begrenzt – sonst könnte eine fehlerhafte Datei Vorschau und Seitenleiste
+   lahmlegen. Alle Texte laufen später nur über fillText/textContent/.value,
+   nie über innerHTML. */
+function kpiStr(v, max) { return typeof v === 'string' ? v.slice(0, max) : ''; }
+function kpiNum(v, lo, hi, fallback) {
+  const n = Number(v);
+  return Number.isFinite(n) ? Math.min(hi, Math.max(lo, n)) : fallback;
+}
+
+function kpiNormalize(raw) {
+  const p = raw && typeof raw === 'object' ? raw : {};
+  const s = kpiBaseSettings();
+  s.name = kpiStr(p.name, 60);
+  s.format = KPI_FORMATS.some(f => f.key === p.format) ? p.format : s.format;
+  s.count = kpiNum(p.count, 0.4, 5, s.count);
+  s.hold = kpiNum(p.hold, 0.5, 8, s.hold);
+  s.trans = kpiNum(p.trans, 0.2, 2, s.trans);
+  s.transKind = KPI_TRANSITIONS.some(t => t.key === p.transKind) ? p.transKind : s.transKind;
+  s.dynCount = typeof p.dynCount === 'boolean' ? p.dynCount : s.dynCount;
+  s.loop = typeof p.loop === 'boolean' ? p.loop : s.loop;
+  s.logo = typeof p.logo === 'boolean' ? p.logo : s.logo;
+  // Ein gespeicherter Wert kann außerhalb der heutigen Auswahl liegen (die
+  // Bereiche wurden nachträglich enger gefasst) – auf den nächstliegenden
+  // erlaubten Wert ziehen, statt eine leere Auswahl anzuzeigen.
+  s.gifFps = kpiNearest(p.gifFps == null ? s.gifFps : p.gifFps, KPI_GIF_FPS, s.gifFps);
+  s.gifColors = kpiNearest(p.gifColors == null ? s.gifColors : p.gifColors, KPI_GIF_COLORS, s.gifColors);
+  s.items = (Array.isArray(p.items) ? p.items : []).slice(0, KPI_MAX_ITEMS)
+    .filter(it => it && typeof it === 'object').map(kpiMakeItem);
+  return s;
 }
 
 // ---------------------------------------------------------------------
@@ -97,9 +140,9 @@ function kpiEaseOutCubic(x) { return 1 - Math.pow(1 - x, 3); }
 function kpiEaseInOutCubic(x) { return x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2; }
 function kpiEven(n) { return Math.round(n / 2) * 2; }   // H.264 braucht gerade Maße
 
-function kpiNearest(value, list) {
+function kpiNearest(value, list, fallback) {
   const v = Number(value);
-  if (!Number.isFinite(v)) return list[0];
+  if (!Number.isFinite(v)) return fallback;
   return list.reduce((best, x) => Math.abs(x - v) < Math.abs(best - v) ? x : best, list[0]);
 }
 
@@ -121,13 +164,74 @@ function kpiValueText(item, value) {
   return unit === '%' ? num + unit : num + ' ' + unit;
 }
 
-/* Akzeptiert auch deutsch formatierte Eingaben ("700.000", "2,4"), damit man
-   Zahlen direkt aus einer Auswertung hineinkopieren kann. */
-function kpiParseNum(str) {
-  const cleaned = String(str == null ? '' : str)
-    .replace(/\./g, '').replace(',', '.').replace(/[^0-9.\-]/g, '');
-  const n = parseFloat(cleaned);
-  return isNaN(n) ? 0 : n;
+/* Liest eine eingetippte Zahl und leitet daraus die Nachkommastellen ab: wer
+   "2,4" schreibt, bekommt eine Stelle, wer "2,45" schreibt, zwei – ein eigenes
+   Feld dafür braucht es nicht. Deutsch formatierte Eingaben ("700.000", "2,4")
+   gehen direkt, damit sich Zahlen aus einer Auswertung hineinkopieren lassen.
+
+   Ein einzelner Punkt wäre sonst mehrdeutig: "700.000" ist ein Tausenderpunkt,
+   "2.4" aber eindeutig eine englisch geschriebene Dezimalzahl. Ohne diese
+   Unterscheidung würde "2.4" stillschweigend zu 24. Regel: kein Komma, genau
+   ein Punkt und nicht genau drei Ziffern dahinter (oder eine führende Null)
+   gilt als Dezimalpunkt. */
+function kpiParseNumber(str) {
+  let s = String(str == null ? '' : str).trim();
+  const neg = /^[-−–]/.test(s);
+  s = s.replace(/[^0-9.,]/g, '');
+
+  let intPart = s, frac = '';
+  const comma = s.lastIndexOf(',');
+  if (comma >= 0) {
+    intPart = s.slice(0, comma).replace(/\./g, '');
+    frac = s.slice(comma + 1).replace(/[.,]/g, '');
+  } else {
+    const dots = (s.match(/\./g) || []).length;
+    if (dots === 1) {
+      const [a, b] = s.split('.');
+      const thousands = b.length === 3 && a !== '0' && a !== '';
+      if (!thousands) { intPart = a; frac = b; }
+      else intPart = a + b;
+    } else {
+      intPart = s.replace(/\./g, '');
+    }
+  }
+
+  const value = Number((intPart || '0') + (frac ? '.' + frac : '')) * (neg ? -1 : 1);
+  return {
+    value: Number.isFinite(value) ? Math.max(-1e12, Math.min(1e12, value)) : 0,
+    decimals: Math.min(3, frac.length)
+  };
+}
+
+/* Von und Bis werden mit gleich vielen Stellen angezeigt, damit die Zahl beim
+   Hochzählen nicht zwischen "0" und "2,4" die Schreibweise wechselt. Die
+   Stellenzahl ist deshalb das Maximum beider Angaben. */
+function kpiApplyNumbers(item) {
+  const a = kpiParseNumber(item.fromText), b = kpiParseNumber(item.toText);
+  item.from = a.value;
+  item.to = b.value;
+  item.decimals = Math.max(a.decimals, b.decimals);
+}
+
+/* Baut ein vollständiges, geprüftes Item. Die ID wird immer neu vergeben, auch
+   beim Laden einer Datei – fremde IDs könnten sonst mit vorhandenen kollidieren.
+   Ältere Stände kennen nur Zahlen und eine feste Stellenzahl; daraus wird der
+   Eingabetext rekonstruiert. */
+function kpiMakeItem(src) {
+  src = src || {};
+  const legacy = n => kpiFormatNumber(kpiNum(n, -1e12, 1e12, 0), kpiNum(src.decimals, 0, 3, 0));
+  const item = {
+    id: kpiId(),
+    prefix: kpiStr(src.prefix, 80),
+    fromText: typeof src.fromText === 'string' ? src.fromText.slice(0, 24) : legacy(src.from),
+    toText: typeof src.toText === 'string' ? src.toText.slice(0, 24) : legacy(src.to),
+    unit: kpiStr(src.unit, 30),
+    text: kpiStr(src.text, 300),
+    source: kpiStr(src.source, 120),
+    variant: DASH_VARIANT_ORDER.includes(src.variant) ? src.variant : 'black'
+  };
+  kpiApplyNumbers(item);
+  return item;
 }
 
 /* Die Schriftgröße der Zahl wird einmal am breitesten Zustand ausgerichtet und
@@ -211,56 +315,79 @@ function kpiDrawLogo(ctx, W, H, variant) {
   ctx.drawImage(img, (W - w) / 2, H - h - H * 0.055, w, h);
 }
 
-function kpiDrawContent(ctx, W, H, item, value) {
-  const v = DASH_VARIANTS[item.variant] || DASH_VARIANTS.black;
-  ctx.fillStyle = v.bg;
-  ctx.fillRect(0, 0, W, H);
+/* Das Tafel-Layout als Datenstruktur statt direkt beim Zeichnen: dieselbe
+   Rechnung liefert die Zeichenpositionen, die Trefferflächen für den
+   Doppelklick und die Lage des Eingabefelds in der Vorschau – so können die
+   drei nie auseinanderlaufen.
 
-  const maxW = W - 2 * (W * 0.09);
+   Größen richten sich nach der kürzeren Seite S statt nach der Breite: im
+   niedrigen 16:9-Format würde sonst alles an der Breite wachsen und oben und
+   unten aus der Tafel laufen. Bei 1:1, 4:5 und 9:16 ist S gleich der Breite,
+   dort ändert sich nichts. */
+function kpiLayout(W, H, item) {
+  const v = DASH_VARIANTS[item.variant] || DASH_VARIANTS.black;
+  const S = Math.min(W, H);
+  const maxW = Math.min(W * 0.82, S * 1.1);
+  const small = { max: Math.round(S * 0.052), min: 12, weight: 400, lsF: 0.04 };
   const prefix = (item.prefix || '').trim();
   const text = (item.text || '').trim();
+  const source = (item.source || '').trim();
 
-  const preFit = prefix
-    ? dashFitLine(prefix, maxW, { max: Math.round(W * 0.052), min: 12, weight: 400, lsF: 0.04 })
-    : null;
-  const numFit = dashFitLine(kpiWidestValue(item), maxW,
-    { max: Math.round(W * 0.27), min: 24, weight: 700, lsF: 0 });
-  const txtFit = text
-    ? dashFitBlock(text, maxW, H * 0.30, { max: Math.round(W * 0.072), min: 14, weight: 700, lsF: 0.01, lhF: 1.14 })
-    : null;
+  const blocks = [];
+  if (prefix) blocks.push({ key: 'prefix', kind: 'line', text: prefix, fit: dashFitLine(prefix, maxW, small), gap: 0 });
+  blocks.push({ key: 'num', kind: 'num', gap: prefix ? S * 0.03 : 0,
+    fit: dashFitLine(kpiWidestValue(item), maxW, { max: Math.round(S * 0.27), min: 24, weight: 700, lsF: 0 }) });
+  if (text) blocks.push({ key: 'text', kind: 'block', text, gap: S * 0.05,
+    fit: dashFitBlock(text, maxW, H * 0.30, { max: Math.round(S * 0.072), min: 14, weight: 700, lsF: 0.01, lhF: 1.14 }) });
+  if (source) blocks.push({ key: 'source', kind: 'line', text: source, gap: text ? S * 0.035 : S * 0.05,
+    fit: dashFitLine(source, maxW, small) });
 
-  const gapPre = W * 0.03, gapTxt = W * 0.05;
-  const preH = preFit ? preFit.size * 1.2 : 0;
-  const numH = numFit.size * 0.82;
-  const txtH = txtFit ? txtFit.lines.length * txtFit.lh : 0;
-  const totalH = preH + (preFit ? gapPre : 0) + numH + (txtFit ? gapTxt + txtH : 0);
-
+  blocks.forEach(b => {
+    b.h = b.kind === 'num' ? b.fit.size * 0.82
+        : b.kind === 'block' ? b.fit.lines.length * b.fit.lh
+        : b.fit.size * 1.2;
+  });
+  const totalH = blocks.reduce((a, b) => a + b.h + b.gap, 0);
   let y = (H - totalH) / 2;
   const cx = W / 2;
+  blocks.forEach((b, i) => {
+    y += b.gap;
+    b.y = y;
+    y += b.h;
+    // Trefferfläche reicht bis zur Mitte der angrenzenden Lücken, damit
+    // zwischen den Blöcken keine Totzonen entstehen.
+    const next = blocks[i + 1];
+    b.rect = { x: cx - maxW / 2, w: maxW, y: b.y - b.gap / 2, h: b.h + b.gap / 2 + (next ? next.gap / 2 : 0) };
+  });
+  return { v, S, cx, maxW, blocks };
+}
+
+function kpiDrawContent(ctx, W, H, item, value) {
+  const L = kpiLayout(W, H, item);
+  const v = L.v;
+  ctx.fillStyle = v.bg;
+  ctx.fillRect(0, 0, W, H);
   ctx.textAlign = 'center';
   ctx.textBaseline = 'alphabetic';
 
-  if (preFit) {
-    ctx.font = '400 ' + preFit.size + 'px ' + F_REG;
-    ctx.fillStyle = v.sub;
-    kpiSetLetterSpacing(ctx, preFit.ls);
-    ctx.fillText(prefix, cx, y + preFit.size * 0.85);
-    y += preH + gapPre;
-  }
-
-  ctx.font = '700 ' + numFit.size + 'px ' + F_BOLD;
-  ctx.fillStyle = v.accent;
-  kpiSetLetterSpacing(ctx, 0);
-  ctx.fillText(kpiValueText(item, value), cx, y + numFit.size * 0.75);
-  y += numH;
-
-  if (txtFit) {
-    y += gapTxt;
-    ctx.font = '700 ' + txtFit.size + 'px ' + F_BOLD;
-    ctx.fillStyle = v.text;
-    kpiSetLetterSpacing(ctx, txtFit.ls);
-    txtFit.lines.forEach((line, i) => ctx.fillText(line, cx, y + txtFit.size * 0.85 + i * txtFit.lh));
-  }
+  L.blocks.forEach(b => {
+    if (b.kind === 'line') {
+      ctx.font = '400 ' + b.fit.size + 'px ' + F_REG;
+      ctx.fillStyle = v.sub;
+      kpiSetLetterSpacing(ctx, b.fit.ls);
+      ctx.fillText(b.text, L.cx, b.y + b.fit.size * 0.85);
+    } else if (b.kind === 'num') {
+      ctx.font = '700 ' + b.fit.size + 'px ' + F_BOLD;
+      ctx.fillStyle = v.accent;
+      kpiSetLetterSpacing(ctx, 0);
+      ctx.fillText(kpiValueText(item, value), L.cx, b.y + b.fit.size * 0.75);
+    } else {
+      ctx.font = '700 ' + b.fit.size + 'px ' + F_BOLD;
+      ctx.fillStyle = v.text;
+      kpiSetLetterSpacing(ctx, b.fit.ls);
+      b.fit.lines.forEach((line, i) => ctx.fillText(line, L.cx, b.y + b.fit.size * 0.85 + i * b.fit.lh));
+    }
+  });
 
   kpiSetLetterSpacing(ctx, 0);
   if (kpi.logo) kpiDrawLogo(ctx, W, H, v);
@@ -303,15 +430,10 @@ function kpiDrawEmpty(ctx, W, H) {
   ctx.fillText('Noch keine KPI – rechts oben „+ KPI" klicken', W / 2, H / 2);
 }
 
-function kpiRenderAt(ctx, t, W, H) {
-  ctx.setTransform(1, 0, 0, 1, 0, 0);
-  ctx.globalAlpha = 1;
-  ctx.fillStyle = '#000000';
-  ctx.fillRect(0, 0, W, H);
-
+/* Ordnet einen Zeitpunkt einer Tafel zu. Von hier lesen sowohl das Zeichnen
+   als auch der Doppelklick in der Vorschau (welche Tafel ist gerade zu sehen?). */
+function kpiLocate(t) {
   const n = kpi.items.length;
-  if (!n) { kpiDrawEmpty(ctx, W, H); return; }
-
   const { slots } = kpiTimeline();
   // Gegen einen unbrauchbaren Zeitwert absichern: ein NaN würde sonst zu einer
   // undefinierten Tafel führen und mitten in einer laufenden Aufnahme eine
@@ -321,11 +443,24 @@ function kpiRenderAt(ctx, t, W, H) {
   while (idx < n - 1 && safeT >= slots[idx + 1].start) idx++;
   const cur = slots[idx];
   const local = safeT - cur.start;
+  const inTransition = local > cur.slot;
+  const p = inTransition ? kpiEaseInOutCubic(kpiClamp01((local - cur.slot) / Math.max(0.01, kpi.trans))) : 0;
+  return { idx, cur, local, inTransition, p };
+}
 
-  if (local <= cur.slot) {
+function kpiRenderAt(ctx, t, W, H) {
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = '#000000';
+  ctx.fillRect(0, 0, W, H);
+
+  const n = kpi.items.length;
+  if (!n) { kpiDrawEmpty(ctx, W, H); return; }
+
+  const { idx, cur, local, inTransition, p } = kpiLocate(t);
+  if (!inTransition) {
     kpiDrawContent(ctx, W, H, kpi.items[idx], kpiValueAt(kpi.items[idx], local, cur.count));
   } else {
-    const p = kpiEaseInOutCubic(kpiClamp01((local - cur.slot) / Math.max(0.01, kpi.trans)));
     kpiDrawTransition(ctx, W, H, kpi.items[idx], kpi.items[(idx + 1) % n], p);
   }
 }
@@ -369,11 +504,200 @@ function kpiSyncPlayBtn() {
   if (btn) btn.textContent = kpiRaf ? 'Pause' : 'Abspielen';
 }
 
+/* Aktueller Zeitpunkt der Vorschau in Sekunden, laufend wie pausiert. */
+function kpiNowT() {
+  const total = kpiTotal();
+  const ms = kpiRaf ? performance.now() - (kpiT0 || performance.now()) : (kpiPausedAt || 0);
+  return (ms / 1000) % total;
+}
+
+/* Zeichnet die Vorschau neu, wenn sie steht. Läuft die Animation, holt sie
+   jede Änderung im nächsten Bild von selbst ab – dann ist hier nichts zu tun.
+   Im Bearbeitungsmodus zeigt sie die bearbeitete Tafel im Endzustand: wer
+   Text tippt, will ihn lesen können und nicht eine halb hochgezählte Zahl. */
+function kpiRedraw() {
+  if (!kpiOpened || !kpiCtx || kpiRaf) return;
+  const W = kpiCanvas.width, H = kpiCanvas.height;
+  const it = kpiEdit && kpi.items.find(i => i.id === kpiEdit.id);
+  if (it) {
+    kpiCtx.setTransform(1, 0, 0, 1, 0, 0);
+    kpiCtx.globalAlpha = 1;
+    kpiDrawContent(kpiCtx, W, H, it, kpiEdit.showFrom ? it.from : it.to);
+  } else {
+    kpiRenderAt(kpiCtx, kpiNowT(), W, H);
+  }
+  kpiPositionInline();
+}
+
 function kpiApplyFormat() {
   const f = kpiFormat();
   kpiCanvas.width = f.w;
   kpiCanvas.height = f.h;
-  kpiRenderAt(kpiCtx, 0, f.w, f.h);
+  if (kpiRaf) kpiRenderAt(kpiCtx, 0, f.w, f.h); else kpiRedraw();
+}
+
+// ---------------------------------------------------------------------
+// 6b. BEARBEITUNGSMODUS
+// Solange man an einer KPI arbeitet, bleibt die Vorschau auf dieser Tafel
+// stehen. "Arbeiten" heißt: die Maus ist über der Seitenleiste, ein Feld darin
+// hat den Fokus, oder das Eingabefeld in der Vorschau ist offen. Diese Gründe
+// sind unabhängig voneinander – der Modus gilt, solange mindestens einer
+// zutrifft. So bleibt die Vorschau auch dann stehen, wenn man das Feld per
+// Enter verlässt, die Maus aber noch in der Spalte ist.
+//
+// Fortgesetzt wird erst, wenn kein Grund mehr übrig ist, und nur, wenn sie
+// vorher lief: wer die Vorschau von Hand angehalten hat, soll sie nicht
+// plötzlich wieder starten.
+// ---------------------------------------------------------------------
+let kpiEdit = null;              // { id, showFrom, wasPlaying, hover, focus, inline }
+let kpiPlayPressedWhileEditing = false;
+
+/* Schaltet einen Grund ein. opts.id bestimmt die gezeigte KPI (Standard: die
+   ausgewählte), opts.showFrom zeigt statt des Endwerts den Startwert. */
+function kpiEditOn(reason, opts) {
+  opts = opts || {};
+  if (!kpiEdit) {
+    kpiEdit = { id: kpiSelId, showFrom: false, wasPlaying: !!kpiRaf, hover: false, focus: false, inline: false };
+    kpiPause();
+  }
+  kpiEdit[reason] = true;
+  if (opts.id !== undefined) kpiEdit.id = opts.id;
+  if (opts.showFrom !== undefined) kpiEdit.showFrom = !!opts.showFrom;
+  kpiRedraw();
+}
+
+/* Schaltet einen Grund aus. Der Modus endet erst, wenn alle drei aus sind. */
+function kpiEditOff(reason) {
+  if (!kpiEdit) return;
+  kpiEdit[reason] = false;
+  if (reason === 'inline') kpiCloseInline();
+  if (reason === 'focus') kpiEdit.showFrom = false;   // ohne Fokus gibt es keinen Grund mehr für den Startwert
+  if (kpiEdit.hover || kpiEdit.focus || kpiEdit.inline) { kpiRedraw(); return; }
+  kpiEndEdit();
+}
+
+/* Beendet den Modus unabhängig von den Gründen (Export, Laden, Schließen). */
+function kpiEndEdit() {
+  if (!kpiEdit) return;
+  const resume = kpiEdit.wasPlaying;
+  kpiEdit = null;
+  kpiCloseInline();
+  if (resume) kpiPlay(); else kpiRedraw();
+}
+
+// ---------------------------------------------------------------------
+// 6c. TEXT DIREKT IN DER VORSCHAU BEARBEITEN (Doppelklick)
+// Über dem angeklickten Textblock liegt ein unsichtbares Eingabefeld, das nur
+// Cursor und Auswahl liefert. Den Text zeichnet weiter das Canvas, live und mit
+// dem echten Umbruch – so sieht man beim Tippen exakt das spätere Ergebnis.
+// Die Zahl ist bewusst ausgenommen: sie besteht aus Von, Bis und Einheit, ein
+// einzelnes Feld darüber wäre irreführend. Dort springt der Doppelklick ins
+// Feld "Bis" der Seitenleiste.
+// ---------------------------------------------------------------------
+let kpiInlineEl = null;
+let kpiExporting = false;
+
+function kpiVisibleItem() {
+  if (kpiEdit) return kpi.items.find(i => i.id === kpiEdit.id) || null;
+  if (!kpi.items.length) return null;
+  const loc = kpiLocate(kpiNowT());
+  const idx = loc.inTransition && loc.p >= 0.5 ? (loc.idx + 1) % kpi.items.length : loc.idx;
+  return kpi.items[idx];
+}
+
+function kpiHitTest(e) {
+  const item = kpiVisibleItem();
+  if (!item) return null;
+  const r = kpiCanvas.getBoundingClientRect();
+  const x = (e.clientX - r.left) * kpiCanvas.width / r.width;
+  const y = (e.clientY - r.top) * kpiCanvas.height / r.height;
+  const L = kpiLayout(kpiCanvas.width, kpiCanvas.height, item);
+  const hit = L.blocks.find(b => x >= b.rect.x && x <= b.rect.x + b.rect.w && y >= b.rect.y && y <= b.rect.y + b.rect.h);
+  return hit ? { item, key: hit.key } : null;
+}
+
+function kpiPositionInline() {
+  const el = kpiInlineEl;
+  if (!el || !kpiEdit) return;
+  const item = kpi.items.find(i => i.id === kpiEdit.id);
+  if (!item) return;
+  const L = kpiLayout(kpiCanvas.width, kpiCanvas.height, item);
+  const b = L.blocks.find(x => x.key === el.dataset.kpiField);
+  if (!b) return;   // Text komplett gelöscht: Block existiert nicht mehr, Feld bleibt stehen
+
+  const stage = kpiCanvas.parentElement;
+  const cr = kpiCanvas.getBoundingClientRect(), sr = stage.getBoundingClientRect();
+  const k = cr.width / kpiCanvas.width;
+  const isBlock = b.kind === 'block';
+  el.style.left = (cr.left - sr.left + (L.cx - L.maxW / 2) * k) + 'px';
+  el.style.top = (cr.top - sr.top + b.y * k) + 'px';
+  el.style.width = (L.maxW * k) + 'px';
+  el.style.height = (b.h * k) + 'px';
+  el.style.fontFamily = isBlock ? F_BOLD : F_REG;
+  el.style.fontWeight = isBlock ? '700' : '400';
+  el.style.fontSize = (b.fit.size * k) + 'px';
+  el.style.lineHeight = ((isBlock ? b.fit.lh : b.h) * k) + 'px';
+  el.style.letterSpacing = ((b.fit.ls || 0) * k) + 'px';
+  el.style.caretColor = isBlock ? L.v.text : L.v.sub;
+}
+
+function kpiStartInline(item, key) {
+  kpiCloseInline();
+  kpiEditOn('inline', { id: item.id, showFrom: false });
+
+  const multi = key === 'text';
+  const el = document.createElement(multi ? 'textarea' : 'input');
+  if (!multi) el.type = 'text';
+  el.className = 'kpi-inline';
+  el.value = item[key] || '';
+  el.dataset.kpiField = key;
+  const original = el.value;
+  kpiCanvas.parentElement.appendChild(el);
+  kpiInlineEl = el;
+
+  el.addEventListener('input', () => {
+    item[key] = el.value;
+    if (kpiFieldEls[key]) kpiFieldEls[key].value = el.value;
+    kpiItemChanged(item);
+  });
+  el.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+      el.value = original;
+      item[key] = original;
+      if (kpiFieldEls[key]) kpiFieldEls[key].value = original;
+      kpiItemChanged(item);
+      el.blur();
+    } else if (e.key === 'Enter' && !(multi && e.shiftKey)) {
+      e.preventDefault();
+      el.blur();
+    }
+  });
+  el.addEventListener('blur', () => { if (kpiInlineEl === el) kpiEditOff('inline'); });
+
+  kpiPositionInline();
+  el.focus();
+  el.select();
+}
+
+function kpiCloseInline() {
+  const el = kpiInlineEl;
+  if (!el) return;
+  kpiInlineEl = null;
+  el.remove();
+}
+
+function kpiOnCanvasDblClick(e) {
+  if (kpiExporting) return;
+  const hit = kpiHitTest(e);
+  if (!hit) return;
+  e.preventDefault();
+  if (kpiSelId !== hit.item.id) { kpiSelId = hit.item.id; kpiSyncSidebar(); }
+  if (hit.key === 'num') {
+    const f = kpiFieldEls.toText;
+    if (f) { f.focus(); f.select(); }
+  } else {
+    kpiStartInline(hit.item, hit.key);
+  }
 }
 
 // ---------------------------------------------------------------------
@@ -456,6 +780,8 @@ function kpiSyncSidebar() {
   const sb = document.getElementById('kpi-sidebar');
   if (!sb) return;
   sb.innerHTML = '';
+  kpiTitleEls = {};
+  kpiFieldEls = {};
 
   const meta = dashEl('div', 'dash-side-group');
   meta.appendChild(dashEl('div', 'dash-side-label', 'Bezeichnung'));
@@ -479,7 +805,9 @@ function kpiSyncSidebar() {
     const row = dashEl('div', 'kpi-item' + (it.id === kpiSelId ? ' active' : ''));
     row.addEventListener('click', () => { kpiSelId = it.id; kpiSyncSidebar(); });
 
-    row.appendChild(dashEl('div', 'kpi-item-title', (i + 1) + '. ' + kpiValueText(it, Number(it.to) || 0)));
+    const title = dashEl('div', 'kpi-item-title', kpiItemTitle(it));
+    kpiTitleEls[it.id] = title;
+    row.appendChild(title);
 
     const acts = dashEl('div', 'kpi-item-acts');
     acts.appendChild(kpiIconBtn('↑', 'Nach oben', 'icon-btn', () => kpiMove(i, -1)));
@@ -522,7 +850,7 @@ function kpiSyncSidebar() {
     }
     body.appendChild(slider);
     if (kpi.dynCount) {
-      body.appendChild(dashEl('div', 'kpi-file-hint', 'Richtet sich nach der Höhe der Zahl – kleine Werte zählen kurz, große lange.'));
+      body.appendChild(dashEl('div', 'kpi-note', 'Richtet sich nach der Höhe der Zahl – kleine Werte zählen kurz, große lange.'));
     }
     body.appendChild(kpiSlider('Standzeit', kpi.hold, 0.5, 8, 0.1, v => { kpi.hold = v; kpiPersist(); }));
     body.appendChild(kpiSlider('Übergang', kpi.trans, 0.2, 2, 0.05, v => { kpi.trans = v; kpiPersist(); }));
@@ -534,6 +862,20 @@ function kpiSyncSidebar() {
     body.appendChild(kpiCheckbox('mc-Logo einblenden', kpi.logo, v => { kpi.logo = v; kpiPersist(); }));
   }));
 
+  // Wird die Seitenleiste neu aufgebaut, während ein Feld Fokus hatte, verschwindet
+  // es ohne Abschlussereignis. Dann den Bearbeitungsmodus selbst beenden, sonst
+  // bliebe die Vorschau für immer pausiert.
+  if (kpiEdit && kpiEdit.focus) {
+    const a = document.activeElement;
+    if (!(a && a.dataset && a.dataset.kpiEdit)) kpiEditOff('focus');
+  }
+  // Wechselt die Auswahl, während die Maus noch in der Spalte ist, soll die
+  // Vorschau die neu gewählte KPI zeigen und nicht die vorherige.
+  if (kpiEdit && !kpiEdit.inline && kpiEdit.id !== kpiSelId) {
+    kpiEdit.id = kpiSelId;
+    kpiEdit.showFrom = false;
+    kpiRedraw();
+  }
 }
 
 function kpiFillSelect(el, values, active) {
@@ -563,35 +905,65 @@ function kpiCloseGifModal() {
   document.getElementById('kpi-gif-overlay').classList.remove('visible');
 }
 
+/* Felder der ausgewählten KPI. Jedes trägt data-kpi-edit: ein Fokus darauf
+   startet den Bearbeitungsmodus (siehe kpiInit). Die Elemente werden in
+   kpiFieldEls vorgehalten, damit das Eingabefeld in der Vorschau ihren Inhalt
+   mitführen kann, ohne die Seitenleiste neu aufzubauen. */
+function kpiEditable(el, key, extra) {
+  el.dataset.kpiEdit = '1';
+  if (extra) Object.assign(el.dataset, extra);
+  kpiFieldEls[key] = el;
+  return el;
+}
+
+function kpiItemTitle(item) {
+  return (kpi.items.indexOf(item) + 1) + '. ' + kpiValueText(item, item.to);
+}
+
+/* Jede Änderung an einer KPI läuft hier durch: Überschrift in der Liste und
+   Vorschau nachführen, danach speichern. */
+function kpiItemChanged(item) {
+  const t = kpiTitleEls[item.id];
+  if (t) t.textContent = kpiItemTitle(item);
+  kpiPersist();
+}
+
+function kpiTextField(item, key) {
+  return kpiEditable(dashInput(item[key], v => { item[key] = v; kpiItemChanged(item); }), key);
+}
+
+function kpiNumberField(item, key) {
+  const textKey = key + 'Text';
+  return kpiEditable(dashInput(item[textKey], v => {
+    item[textKey] = v;
+    kpiApplyNumbers(item);
+    kpiItemChanged(item);
+  }), textKey, key === 'from' ? { kpiFrom: '1' } : null);
+}
+
 function kpiItemFields(item) {
   const g = dashEl('div', 'dash-side-group');
   g.appendChild(dashEl('div', 'dash-side-label', 'Ausgewählte KPI'));
 
-  g.appendChild(dashField('Vorspann', dashInput(item.prefix, v => { item.prefix = v; kpiPersist(); })));
+  g.appendChild(dashField('Vorspann', kpiTextField(item, 'prefix')));
 
   const row = dashEl('div', 'dash-row');
-  row.appendChild(dashField('Von', dashInput(kpiFormatNumber(item.from, item.decimals), v => {
-    item.from = kpiParseNum(v); kpiPersist();
-  })));
-  row.appendChild(dashField('Bis', dashInput(kpiFormatNumber(item.to, item.decimals), v => {
-    item.to = kpiParseNum(v); kpiPersist();
-  })));
+  row.appendChild(dashField('Von', kpiNumberField(item, 'from')));
+  row.appendChild(dashField('Bis', kpiNumberField(item, 'to')));
   g.appendChild(row);
+  g.appendChild(dashEl('div', 'kpi-note',
+    'Nachkommastellen ergeben sich aus der Eingabe: 2,4 zeigt eine Stelle, 2,45 zwei.'));
 
-  const row2 = dashEl('div', 'dash-row');
-  row2.appendChild(dashField('Einheit', dashInput(item.unit, v => { item.unit = v; kpiPersist(); })));
-  row2.appendChild(dashField('Nachkommastellen', dashInput(String(item.decimals || 0), v => {
-    item.decimals = Math.max(0, Math.min(3, parseInt(v, 10) || 0));
-    kpiPersist();
-  }, 'number')));
-  g.appendChild(row2);
+  g.appendChild(dashField('Einheit', kpiTextField(item, 'unit')));
 
   const ta = document.createElement('textarea');
   ta.className = 'dash-input';
   ta.rows = 3;
   ta.value = item.text || '';
-  ta.addEventListener('input', () => { item.text = ta.value; kpiPersist(); });
-  g.appendChild(dashField('Beschreibung', ta));
+  ta.addEventListener('input', () => { item.text = ta.value; kpiItemChanged(item); });
+  g.appendChild(dashField('Beschreibung', kpiEditable(ta, 'text')));
+
+  g.appendChild(dashField('Quelle / Jahr', kpiTextField(item, 'source')));
 
   const sw = dashEl('div', 'dash-side-label', 'Farbe');
   sw.style.marginTop = '14px';
@@ -614,15 +986,17 @@ function kpiItemFields(item) {
 // 8. BEARBEITEN
 // ---------------------------------------------------------------------
 function kpiAdd() {
-  const item = { id: kpiId(), prefix: 'bis zu', from: 0, to: 100, decimals: 0, unit: '%',
-    text: 'Beschreibung der Kennzahl', variant: 'black' };
+  if (kpi.items.length >= KPI_MAX_ITEMS) { showToast('Maximal ' + KPI_MAX_ITEMS + ' KPIs möglich'); return; }
+  const item = kpiMakeItem({ prefix: 'bis zu', fromText: '0', toText: '100', unit: '%',
+    text: 'Beschreibung der Kennzahl', variant: 'black' });
   kpi.items.push(item);
   kpiSelId = item.id;
   kpiRefresh();
 }
 
 function kpiDuplicate(i) {
-  const copy = Object.assign({}, kpi.items[i], { id: kpiId() });
+  if (kpi.items.length >= KPI_MAX_ITEMS) { showToast('Maximal ' + KPI_MAX_ITEMS + ' KPIs möglich'); return; }
+  const copy = kpiMakeItem(kpi.items[i]);   // vergibt eine neue ID
   kpi.items.splice(i + 1, 0, copy);
   kpiSelId = copy.id;
   kpiRefresh();
@@ -650,6 +1024,7 @@ function kpiRefresh() {
 
 let kpiPersistTimer = null;
 function kpiPersist() {
+  kpiRedraw();   // steht die Vorschau, sofort sichtbar machen; läuft sie, holt sie es selbst ab
   clearTimeout(kpiPersistTimer);
   kpiPersistTimer = setTimeout(() => {
     try { localStorage.setItem(KPI_LS_KEY, JSON.stringify(kpi)); } catch (e) { /* Quota – nicht kritisch */ }
@@ -662,16 +1037,61 @@ function kpiLoadStored() {
     if (!raw) return null;
     const p = JSON.parse(raw);
     if (!p || p.v !== 1 || !Array.isArray(p.items)) return null;
-    // Über die Standardwerte legen, damit ein älterer Stand ohne die später
-    // ergänzten Felder (z. B. GIF-Einstellungen) nicht zu undefined führt.
-    const merged = Object.assign(kpiDefaultState(), p);
-    // Ein gespeicherter Wert kann außerhalb der heutigen Auswahl liegen (die
-    // Bereiche wurden nachträglich enger gefasst) – auf den nächstliegenden
-    // erlaubten Wert ziehen, statt eine leere Auswahl anzuzeigen.
-    merged.gifFps = kpiNearest(merged.gifFps, KPI_GIF_FPS);
-    merged.gifColors = kpiNearest(merged.gifColors, KPI_GIF_COLORS);
-    return merged;
+    return kpiNormalize(p);
   } catch (e) { return null; }
+}
+
+// ---------------------------------------------------------------------
+// 8b. PROJEKTDATEI (JSON)
+// Speichert alle KPIs samt Einstellungen, damit sich ein Projekt später wieder
+// laden und anpassen lässt. Bedienung und Dateiendung wie im Dashboard-Tool.
+// ---------------------------------------------------------------------
+const KPI_JSON_MAX_BYTES = 1024 * 1024;
+
+function kpiProjectFileName() {
+  const part = wsgFilenamePart(kpi.name || '');
+  return kpiTodayStamp() + (part ? '_' + part : '') + '_mc_KPI_Projekt.json';
+}
+
+function kpiSaveJson() {
+  const blob = new Blob([JSON.stringify(kpi, null, 2)], { type: 'application/json' });
+  kpiDownload(blob, kpiProjectFileName());
+  showToast('Projektdatei gesichert');
+}
+
+/* Nimmt eine Projektdatei als Text entgegen und ersetzt das aktuelle Projekt.
+   Getrennt vom Dateidialog, damit sich die Prüfung ohne Dateiauswahl testen lässt. */
+function kpiApplyProjectText(text) {
+  let p;
+  try { p = JSON.parse(text); } catch (e) { showToast('Datei konnte nicht gelesen werden'); return false; }
+  if (!p || typeof p !== 'object' || !Array.isArray(p.items)) { showToast('Das ist keine KPI-Projektdatei'); return false; }
+  if (p.v && p.v > 1) { showToast('Datei stammt aus einer neueren Version'); return false; }
+
+  kpiEndEdit();
+  kpi = kpiNormalize(p);
+  kpiSelId = kpi.items.length ? kpi.items[0].id : null;
+  kpiApplyFormat();
+  kpiRefresh();
+  kpiRestart();
+  const skipped = p.items.length - kpi.items.length;
+  showToast(skipped > 0 ? 'Projekt geladen – ' + skipped + ' Einträge nicht übernommen (ungültig oder über dem Limit)' : 'Projekt geladen');
+  return true;
+}
+
+function kpiLoadJson() {
+  const input = document.getElementById('kpi-json-input');
+  input.value = '';
+  input.onchange = () => {
+    const f = input.files && input.files[0];
+    if (!f) return;
+    // Eine Projektdatei ist klein. Alles darüber ist keine – nicht erst einlesen.
+    if (f.size > KPI_JSON_MAX_BYTES) { showToast('Datei ist zu groß für eine KPI-Projektdatei'); return; }
+    const fr = new FileReader();
+    fr.onload = () => kpiApplyProjectText(String(fr.result));
+    fr.onerror = () => showToast('Datei konnte nicht gelesen werden');
+    fr.readAsText(f);
+  };
+  input.click();
 }
 
 // ---------------------------------------------------------------------
@@ -892,11 +1312,22 @@ async function kpiExportGif() {
 function kpiRunExport(fn) {
   const btns = document.querySelectorAll('.kpi-exp-btn');
   btns.forEach(b => { b.disabled = true; });
+  // Während der Aufnahme sind Seitenleiste und Vorschau gesperrt: jede Änderung
+  // an den KPIs würde sonst mitten im Video sichtbar.
+  kpiEndEdit();
+  kpiExporting = true;
+  document.getElementById('kpi-view').classList.add('exporting');
   kpiPause();
   Promise.resolve()
     .then(fn)
     .catch(e => { kpiStatus('Fehler: ' + e.message); console.error(e); })
-    .then(() => { btns.forEach(b => { b.disabled = false; }); kpiProgressReset(); kpiPlay(); });
+    .then(() => {
+      kpiExporting = false;
+      document.getElementById('kpi-view').classList.remove('exporting');
+      btns.forEach(b => { b.disabled = false; });
+      kpiProgressReset();
+      kpiPlay();
+    });
 }
 
 // ---------------------------------------------------------------------
@@ -934,6 +1365,8 @@ function kpiOpen() {
 }
 
 function kpiClose() {
+  kpiEdit = null;   // ohne Fortsetzen: die Ansicht wird gleich geschlossen
+  kpiCloseInline();
   kpiPause();
   kpiOpened = false;
   document.getElementById('kpi-view').classList.remove('visible');
@@ -962,7 +1395,58 @@ function kpiInit() {
     kpiPersist();
     kpiRunExport(kpiExportGif);
   });
-  document.getElementById('kpi-play').addEventListener('click', () => { kpiRaf ? kpiPause() : kpiPlay(); });
+  // Der Abspielen-Button setzt auch den Bearbeitungsmodus fort. Sein Klick kommt
+  // aber erst NACH dem Fokusverlust des Feldes, der die Vorschau schon wieder
+  // gestartet hat – ohne diese Unterscheidung würde derselbe Klick sie
+  // sofort wieder anhalten. pointerdown läuft vor dem Fokuswechsel.
+  const playBtn = document.getElementById('kpi-play');
+  playBtn.addEventListener('pointerdown', () => { kpiPlayPressedWhileEditing = !!kpiEdit; });
+  playBtn.addEventListener('click', () => {
+    if (kpiPlayPressedWhileEditing) {
+      kpiPlayPressedWhileEditing = false;
+      kpiEndEdit();
+      if (!kpiRaf) kpiPlay();
+      return;
+    }
+    kpiRaf ? kpiPause() : kpiPlay();
+  });
+
+  const sb = document.getElementById('kpi-sidebar');
+  sb.addEventListener('focusin', e => {
+    if (e.target.dataset && e.target.dataset.kpiEdit && kpiSelId) {
+      kpiEditOn('focus', { id: kpiSelId, showFrom: e.target.dataset.kpiFrom === '1' });
+    }
+  });
+  sb.addEventListener('focusout', e => {
+    const next = e.relatedTarget;
+    if (next && next.dataset && next.dataset.kpiEdit) return;   // Tab ins nächste Feld: weiter im Modus
+    kpiEditOff('focus');
+  });
+
+  // Maus über der rechten Spalte: Vorschau steht, auch ohne Fokus in einem Feld.
+  // Nur für die Maus – auf Touchgeräten gäbe es kein verlässliches "Verlassen",
+  // die Vorschau bliebe nach dem Antippen dauerhaft stehen.
+  const column = sb.parentElement;
+  column.addEventListener('pointerenter', e => {
+    if (e.pointerType === 'mouse' && !kpiExporting) kpiEditOn('hover');
+  });
+  column.addEventListener('pointerleave', e => {
+    if (e.pointerType === 'mouse') kpiEditOff('hover');
+  });
+  sb.addEventListener('keydown', e => {
+    const el = e.target;
+    if (!el.dataset || !el.dataset.kpiEdit || e.key !== 'Enter') return;
+    // In der Beschreibung bleibt Umschalt+Enter für einen Zeilenumbruch.
+    if (el.tagName === 'TEXTAREA' && e.shiftKey) return;
+    e.preventDefault();
+    el.blur();
+  });
+
+  kpiCanvas = document.getElementById('kpi-canvas');
+  kpiCanvas.addEventListener('dblclick', kpiOnCanvasDblClick);
+  window.addEventListener('resize', kpiPositionInline);
+  document.getElementById('kpi-save-json').addEventListener('click', kpiSaveJson);
+  document.getElementById('kpi-load-json').addEventListener('click', kpiLoadJson);
   document.getElementById('kpi-replay').addEventListener('click', kpiRestart);
   document.getElementById('kpi-reset').addEventListener('click', () => {
     if (!confirm('KPI-Video zurücksetzen?\nAlle eingegebenen Kennzahlen gehen verloren.')) return;

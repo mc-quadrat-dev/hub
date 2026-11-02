@@ -968,7 +968,7 @@
 
     .kpi-body { flex: 1; display: flex; min-height: 0; }
     .kpi-stage {
-      flex: 1; min-width: 0; overflow: hidden;
+      flex: 1; min-width: 0; overflow: hidden; position: relative;
       display: flex; align-items: center; justify-content: center; padding: 24px; background: #000;
     }
     #kpi-canvas {
@@ -976,6 +976,20 @@
       max-width: 100%; max-height: calc(100vh - 190px);
       border: 1px solid rgba(255,255,255,0.12);
     }
+
+    /* Eingabefeld direkt in der Vorschau: der Text selbst bleibt unsichtbar, ihn
+       zeichnet das Canvas – sichtbar sind nur Rahmen, Cursor und Auswahl. */
+    .kpi-inline {
+      position: absolute; z-index: 6; margin: 0; padding: 0; border: 0; border-radius: 0;
+      background: transparent; color: transparent; text-align: center; resize: none; overflow: hidden;
+      outline: 1px dashed rgba(206,251,11,0.9); outline-offset: 6px;
+    }
+    .kpi-inline::selection { background: rgba(206,251,11,0.45); color: transparent; }
+    #kpi-canvas { user-select: none; -webkit-user-select: none; }
+
+    /* Während der Aufnahme ist die Bearbeitung gesperrt */
+    #kpi-view.exporting .kpi-sidebar-outer { pointer-events: none; opacity: 0.55; }
+    #kpi-view.exporting #kpi-canvas { pointer-events: none; }
 
     .kpi-sidebar-outer {
       flex: 0 0 340px; width: 340px;
@@ -989,6 +1003,9 @@
       font-size: 11px; line-height: 1.5; color: rgba(255,255,255,0.4);
       margin-top: 7px; word-break: break-all;
     }
+
+    /* Erklärtext in der Seitenleiste: normaler Wortumbruch, mit Luft nach unten */
+    .kpi-note { font-size: 11px; line-height: 1.5; color: rgba(255,255,255,0.4); margin: 4px 0 14px; }
 
     /* Export-Fortschritt: läuft als Lime-Balken über das Bezeichnungsfeld */
     .kpi-progress-host { position: relative; }
@@ -1925,6 +1942,14 @@
         <div class="kpi-title">KPI-Video</div>
       </div>
       <div class="kpi-header-right">
+        <button class="ctrl-btn" id="kpi-save-json" title="Projekt sichern" style="display:flex; align-items:center; gap:6px;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+          <span class="btn-label">Projekt sichern</span>
+        </button>
+        <button class="ctrl-btn" id="kpi-load-json" title="Projekt laden" style="display:flex; align-items:center; gap:6px;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+          <span class="btn-label">Projekt laden</span>
+        </button>
         <button class="ctrl-btn" id="kpi-play">Pause</button>
         <button class="ctrl-btn" id="kpi-replay">Neu abspielen</button>
         <button class="ctrl-btn" id="kpi-reset">Zurücksetzen</button>
@@ -1941,7 +1966,7 @@
 
     <div class="kpi-body">
       <div class="kpi-stage">
-        <canvas id="kpi-canvas" width="1080" height="1080"></canvas>
+        <canvas id="kpi-canvas" width="1080" height="1080" title="Doppelklick auf einen Text, um ihn direkt zu bearbeiten"></canvas>
       </div>
       <div class="kpi-sidebar-outer">
         <aside class="kpi-sidebar" id="kpi-sidebar"></aside>
@@ -1950,6 +1975,8 @@
 
     <div class="kpi-footer" id="kpi-status"></div>
   </div>
+
+  <input type="file" id="kpi-json-input" accept="application/json,.json" style="display:none;">
 
   <!-- ===== KPI-VIDEO: GIF-EINSTELLUNGEN VOR DEM EXPORT ===== -->
   <div id="kpi-gif-overlay">
@@ -2021,12 +2048,12 @@
        es in der jeweils anderen Version noch nicht bzw. nicht mehr gibt, und
        ganze Bereiche bleiben leer. Bei jedem Deploy mit Code-Änderung hier
        das Datum hochzählen, dann laden HTML und JS garantiert zusammen. -->
-  <script src="app.js?v=20260921"></script>
-  <script src="dashboard.js?v=20260921"></script>
-  <script src="pattern-engine.js?v=20260921"></script>
-  <script src="pattern.js?v=20260921"></script>
-  <script src="intranet.js?v=20260921"></script>
-  <script src="welcome.js?v=20260921"></script>
-  <script src="kpi.js?v=20260921"></script>
+  <script src="app.js?v=20261102"></script>
+  <script src="dashboard.js?v=20261102"></script>
+  <script src="pattern-engine.js?v=20261102"></script>
+  <script src="pattern.js?v=20261102"></script>
+  <script src="intranet.js?v=20261102"></script>
+  <script src="welcome.js?v=20261102"></script>
+  <script src="kpi.js?v=20261102"></script>
 </body>
 </html>
